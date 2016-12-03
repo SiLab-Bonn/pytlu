@@ -17,7 +17,7 @@ setup(
     maintainer='Tomasz Hemperek',
     author_email='j.fleper@gmx.de,hemeprek@uni-bonn.de',
     maintainer_email='hemeprek@uni-bonn.de',
-    install_requires=['basil-daq==2.4.3'],
+    install_requires=['basil-daq'],
     packages=find_packages(),
     include_package_data=True,  
     package_data={'': ['README.*', 'VERSION'], 'docs': ['*'], 'tlu': ['*.yaml', '*.bit']},

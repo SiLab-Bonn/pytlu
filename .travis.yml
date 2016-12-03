@@ -5,10 +5,6 @@ python:
 sudo: required
 dist: trusty
 
-notifications:
-  slack: silab-bonn:8f4D7Bk4ui1f14HsvRVcdFR9
-
-
 before_install:
   - sudo add-apt-repository -y ppa:team-electronics/ppa
   - sudo apt-get update
@@ -27,15 +23,13 @@ install:
   #cocotb
   - git clone https://github.com/potentialventures/cocotb.git
   - export COCOTB=$(pwd)/cocotb
-  - cd cocotb
-  - git reset --hard 6ff0d3985a51c681ddd633ad453202c9020c08fe
-  - cd ..
-
-  - python setup.py develop
   
   # Install basil  
-  - git clone -b v2.4.3 https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
+  - git clone -b development https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
 
+  # Install tlu
+  - python setup.py develop
+  
 script:
   - cd tests;  py.test -s
 
