@@ -1,0 +1,172 @@
+
+
+###########################
+# Register interface #
+###########################
+net "BUS_CLK_IN" LOC = "R9";
+
+net "USB_BUS_ADD<0>" LOC = "J2";
+net "USB_BUS_ADD<1>" LOC = "J1";
+net "USB_BUS_ADD<2>" LOC = "G1";
+net "USB_BUS_ADD<3>" LOC = "H1";
+net "USB_BUS_ADD<4>" LOC = "H4";
+net "USB_BUS_ADD<5>" LOC = "H3";
+net "USB_BUS_ADD<6>" LOC = "G4";
+net "USB_BUS_ADD<7>" LOC = "G3";
+net "USB_BUS_ADD<8>" LOC = "F5";
+net "USB_BUS_ADD<9>" LOC = "G5";
+net "USB_BUS_ADD<10>" LOC = "F3";
+net "USB_BUS_ADD<11>" LOC = "F2";
+net "USB_BUS_ADD<12>" LOC = "E4";
+net "USB_BUS_ADD<13>" LOC = "F4";
+net "USB_BUS_ADD<14>" LOC = "E2";
+net "USB_BUS_ADD<15>" LOC = "E1";
+
+net "BUS_DATA<0>" LOC = "M2";
+net "BUS_DATA<1>" LOC = "M1";
+net "BUS_DATA<2>" LOC = "L5";
+net "BUS_DATA<3>" LOC = "L4";
+net "BUS_DATA<4>" LOC = "L3";
+net "BUS_DATA<5>" LOC = "L2";
+net "BUS_DATA<6>" LOC = "K5";
+net "BUS_DATA<7>" LOC = "K4";
+
+net "BUS_OE_N" LOC = "J3";
+net "BUS_RD_N" LOC = "J4";
+net "BUS_WR_N" LOC = "K2";
+net "BUS_CS_N" LOC = "K3";
+
+net "BUS_CLK_IN" IOSTANDARD = LVCMOS33;
+net "USB_BUS_ADD<*>" IOSTANDARD = LVCMOS33;
+net "BUS_OE_N" IOSTANDARD = LVCMOS33;
+net "BUS_RD_N" IOSTANDARD = LVCMOS33;
+net "BUS_WR_N" IOSTANDARD = LVCMOS33;
+net "BUS_CS_N" IOSTANDARD = LVCMOS33;
+net "BUS_DATA<*>" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+
+net "BUS_CLK_IN" TNM_Net = "TNM_BUS_CLK";
+timespec "TS_BUS_CLK" = PERIOD "TNM_BUS_CLK" 20.0 ns HIGH 50 %;
+
+NET "BUS_WR_N" OFFSET = IN : 15 : AFTER : BUS_CLK_IN ;
+NET "BUS_RD_N" OFFSET = IN : 15 : AFTER : BUS_CLK_IN ;
+NET "BUS_DATA[*]" OFFSET = IN : 15  : AFTER : BUS_CLK_IN ;
+NET "BUS_DATA[*]" OFFSET = OUT : 15 : BEFORE : BUS_CLK_IN ;
+NET "USB_BUS_ADD[*]" OFFSET = IN : 15  : AFTER : BUS_CLK_IN ;
+
+#######################
+# Streaming interface #
+#######################
+net "USB_STREAM_CLK" LOC = "T9";
+net "USB_STREAM_FLAGS_N<0>" LOC = "T8";
+net "USB_STREAM_FLAGS_N<1>" LOC = "T4";
+net "USB_STREAM_FLAGS_N<2>" LOC = "R4";
+
+net "USB_STREAM_FX2Rdy" LOC = "P9";
+net "USB_STREAM_SLRD_n" LOC = "P5";
+net "USB_STREAM_SLWR_n" LOC = "R6";
+net "USB_STREAM_SLOE_n" LOC = "N8";
+
+net "USB_STREAM_FIFOADDR<0>" LOC = "N10";
+net "USB_STREAM_FIFOADDR<1>" LOC = "M10";
+net "USB_STREAM_PKTEND_N" LOC = "R11";
+
+net "USB_STREAM_DATA<0>" LOC = "M6";
+net "USB_STREAM_DATA<1>" LOC = "N6";
+net "USB_STREAM_DATA<2>" LOC = "R7";
+net "USB_STREAM_DATA<3>" LOC = "T7";
+net "USB_STREAM_DATA<4>" LOC = "R10";
+net "USB_STREAM_DATA<5>" LOC = "P10";
+net "USB_STREAM_DATA<6>" LOC = "N11";
+net "USB_STREAM_DATA<7>" LOC = "M11";
+net "USB_STREAM_DATA<8>" LOC = "R12";
+net "USB_STREAM_DATA<9>" LOC = "P12";
+net "USB_STREAM_DATA<10>" LOC = "T13";
+net "USB_STREAM_DATA<11>" LOC = "R13";
+net "USB_STREAM_DATA<12>" LOC = "T10";
+net "USB_STREAM_DATA<13>" LOC = "P13";
+net "USB_STREAM_DATA<14>" LOC = "N12";
+net "USB_STREAM_DATA<15>" LOC = "T14";
+
+net "USB_STREAM_CLK" IOSTANDARD = LVCMOS33;
+net "USB_STREAM_SLRD_n" IOSTANDARD = LVCMOS33 | DRIVE = 6 | SLEW = FAST;
+net "USB_STREAM_SLWR_n" IOSTANDARD = LVCMOS33 | DRIVE = 6 | SLEW = FAST;
+net "USB_STREAM_SLOE_n" IOSTANDARD = LVCMOS33 | DRIVE = 6 | SLEW = FAST;
+net "USB_STREAM_FX2Rdy" IOSTANDARD = LVCMOS33;
+net "USB_STREAM_FIFOADDR<*>" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+net "USB_STREAM_PKTEND_N" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+net "USB_STREAM_DATA<*>" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+net "USB_STREAM_FLAGS_N<*>" IOSTANDARD = LVCMOS33;
+
+net "USB_STREAM_CLK" TNM_net = "USB_STREAM_CLK";
+timespec "TS_StreamCLK" = PERIOD "USB_STREAM_CLK" 20.8 ns HIGH 50 %;
+
+net "USB_STREAM_DATA<*>" OFFSET = in 4.0 ns before USB_STREAM_CLK;
+net "USB_STREAM_DATA<*>" OFFSET = out 16.0 ns after USB_STREAM_CLK;
+
+net "USB_STREAM_SLRD_n" OFFSET = OUT 8 ns AFTER USB_STREAM_CLK;
+net "USB_STREAM_SLWR_n" OFFSET = OUT 8 ns AFTER USB_STREAM_CLK;
+net "USB_STREAM_SLOE_n" OFFSET = OUT 8 ns AFTER USB_STREAM_CLK;
+
+#net "USB_STREAM_FLAGS_N<2>" OFFSET = IN 7 ns BEFORE USB_STREAM_CLK;
+net "USB_STREAM_FLAGS_N<1>" OFFSET = IN 7 ns BEFORE USB_STREAM_CLK;
+net "USB_STREAM_FLAGS_N<0>" OFFSET = IN 7 ns BEFORE USB_STREAM_CLK;
+
+#######################
+# Expansion connector #
+#######################
+#net "IO_CLK_N" LOC = "B8";
+#net "IO_CLK_P" LOC = "A8";
+#net "IO_CLK_N" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+#net "IO_CLK_P" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+
+net "LED<0>" LOC = "T12"; #net "IO<0>" LOC = "T12";
+net "LED<1>" LOC = "K15"; #net "IO<1>" LOC = "K15";
+#net "IO<2>" LOC = "P16";
+#net "IO<3>" LOC = "R16";
+#net "IO<4>" LOC = "P15";
+#net "IO<5>" LOC = "P14";
+#net "IO<6>" LOC = "N16";
+#net "IO<7>" LOC = "N15";
+#net "IO<8>" LOC = "M14";
+#net "IO<9>" LOC = "N14";
+#net "IO<10>" LOC = "M16";
+#net "IO<11>" LOC = "M15";
+#net "IO<12>" LOC = "L13";
+#net "IO<13>" LOC = "M13";
+#net "IO<14>" LOC = "L15";
+#net "IO<15>" LOC = "L14";
+#net "IO<16>" LOC = "K12";
+#net "IO<17>" LOC = "L12";
+#net "IO<18>" LOC = "K14";
+net "SCL_OUT" LOC = "K13" | IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST; #net "IO<19>" LOC = "K13";
+net "SDA_OUT" LOC = "J14" | IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST; #net "IO<20>" LOC = "J14";
+net "SCL_IN" LOC = "J13" | IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST; #net "IO<21>" LOC = "J13";
+net "SDA_IN" LOC = "J16" | IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST; #net "IO<22>" LOC = "J16";
+#net "IO<23>" LOC = "K16";
+#net "IO<24>" LOC = "H16";
+#net "IO<25>" LOC = "H15";
+#net "IO<26>" LOC = "H14";
+#net "IO<27>" LOC = "H13";
+#net "IO<28>" LOC = "G15";
+#net "IO<29>" LOC = "G14";
+#net "IO<30>" LOC = "G13";
+#net "IO<31>" LOC = "G12";
+#net "IO<32>" LOC = "F15";
+#net "IO<33>" LOC = "F14";
+#net "IO<34>" LOC = "F13";
+#net "IO<35>" LOC = "F12";
+#net "IO<36>" LOC = "E16";
+#net "IO<37>" LOC = "E15";
+#net "IO<38>" LOC = "E14";
+#net "IO<39>" LOC = "E13";
+#net "IO<40>" LOC = "D16";
+net "LED<2>" LOC = "D15"; #net "IO<41>" LOC = "D15";
+net "LED<3>" LOC = "D14"; #net "IO<42>" LOC = "D14";
+net "LED<4>" LOC = "C15"; #net "IO<43>" LOC = "C15";
+net "LED<6>" LOC = "C16"; #net "IO<44>" LOC = "C16";
+net "LED<5>" LOC = "B16"; #net "IO<45>" LOC = "B16";
+net "LED<7>" LOC = "G16"; #net "IO<46>" LOC = "G16";
+net "LED<*>" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+
+#net "IO<*>" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
+
