@@ -2,6 +2,9 @@ import struct
 import array
 import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 import numpy as np
 import usb.core
 
@@ -86,11 +89,9 @@ def modify_bitfile_image(bitfile):
     image_size = bitfile['image'][0]
     length = (image_size + 511 + 512)&~511
 
-    bitarray = [0] * length
-    for i in range(image_size):
-        bitarray[i] = bitfile['image'][1][i]
-
-    return bitarray
+    ret = array.array('B', bitfile['image'][1])
+    ret +=  array.array('B', [0] * (length - len(ret)) )
+    return ret
 
 class Board:
 # device is not None if usb.core.find() does not find any boards
@@ -122,11 +123,12 @@ class Board:
                         REQUEST['firmware'], 0, 0, 3)[0:3:], timeout=1000)
 
     def __str__(self):
-        print('card_id: {}'.format(self.get_card_id()))
-        print('fpga_type: {}'.format(self.get_fpga_type()))
-        print('serial_number: {}'.format(self.get_serial_number()))
-        print('memory_size: {}'.format(self.get_memory_size()))
-        print('firmware_version: {}?'.format(self.get_firmware_version()))
+        return str({'card_id': '{}'.format(self.get_card_id()),
+        'fpga_type': '{}'.format(self.get_fpga_type()),
+        'serial_number':' {}'.format(self.get_serial_number()),
+        'memory_size': '{}'.format(self.get_memory_size()),
+        #'firmware_version': '{}?'.format(self.get_firmware_version())
+        })
 
     def reset_8051(self):
         ret = np.array([0, 0])
@@ -137,17 +139,22 @@ class Board:
 #        print('reset_8051: {}'.format(ret))
 
 # Not sure why endpoint is 'read_ctrl' and not 'write_ctrl'
-    def write_register(self, value, index, data_or_length):
-        ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
-                REQUEST['write_register'], wValue=value, wIndex=index,
-                data_or_wLength=data_or_length, timeout=1000)
-        logging.debug('write_register: {}'.format(ret))
+    def write_register(self, index, data):
+        for i,d in enumerate(data):
+            ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
+                    REQUEST['write_register'], wValue=index+i, wIndex=d,
+                    data_or_wLength=1, timeout=1000)
+            logger.debug('write_register: {}'.format(ret))
 
-    def read_register(self, value, length):
-        ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
-                REQUEST['read_register'], wValue=value, wIndex=0,
-                data_or_wLength=length, timeout=1000)
-        logging.debug('read_register: {}'.format(ret))
+    def read_register(self, index, length):
+        ret = array.array('B',  '\x00' * length)
+        for i in range(length):
+            ctrl_ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
+                    REQUEST['read_register'], wValue=index+i, wIndex=0,
+                    data_or_wLength=2, timeout=1000)
+            ret[i] = ctrl_ret[1]
+
+        logger.debug('read_register: {}'.format(ret))
         return ret
 
 # Not sure if timeout=1000 is necessary
@@ -156,31 +163,31 @@ class Board:
 
     def read_data(self, length):
         ret = self.dev.read(ENDPOINT['read_data'], length, timeout=1000)
-        logging.debug('read_data: {}'.format(ret))
+        logger.debug('read_data: {}'.format(ret))
         return ret
 
     def set_signal_direction(self, direction):
         ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
                 REQUEST['signal_direction'], wValue=direction, wIndex=0,
                 data_or_wLength=1, timeout=1000)
-        logging.debug('set_signal_direction: {}'.format(ret))
+        logger.debug('set_signal_direction: {}'.format(ret))
 
     def set_signal(self, signal):
         ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
                 REQUEST['set_signal'], wValue=signal, wIndex=0,
                 data_or_wLength=1, timeout=1000)
-        logging.debug('set_signal: {}'.format(ret))
+        logger.debug('set_signal: {}'.format(ret))
 
     def get_signal(self):
         ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
                 REQUEST['get_signal'], wValue=0, wIndex=0,
                 data_or_wLength=2, timeout=1000)
-        logging.debug('get_signal: {}'.format(ret))
+        logger.debug('get_signal: {}'.format(ret))
         return ret
 
     def read_int(self, length):
         ret = self.dev.read(ENDPOINT['read_int'], length, timeout=1000)
-        logging.debug('read_int: {}'.format(ret))
+        logger.debug('read_int: {}'.format(ret))
         return ret
 
 # Not certain if it is really necessary. According to the original driver
@@ -192,13 +199,13 @@ class Board:
         ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
                 REQUEST['write_config'], wValue=4096, wIndex=4096,
                 data_or_wLength=array.array('B', [0, 0]), timeout=1000)
-        logging.debug('ctrl_transfer: {}'.format(ret))
+        logger.debug('ctrl_transfer: {}'.format(ret))
 
         Buffer = np.full(4096, 0, dtype=np.uint16)
         Buffer = array.array('B', Buffer)
 
         ret = self.dev.write(ENDPOINT['write_data'], Buffer, timeout=1000)
-        logging.debug('bulk_write: {}'.format(ret))
+        logger.debug('bulk_write: {}'.format(ret))
 
         self.reset_8051()
 
@@ -211,21 +218,21 @@ class Board:
         ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
                 REQUEST['write_config'], wValue=wValue, wIndex=wIndex,
                 data_or_wLength=array.array('B', [0, 0]), timeout=1000)
-        logging.debug('ctrl_transfer: {}'.format(ret))
+        logger.debug('ctrl_transfer: {}'.format(ret))
 
         ret = self.dev.write(ENDPOINT['write_data'], bitarray)
-        logging.debug('bulk_write: {}'.format(ret))
+        logger.debug('bulk_write: {}'.format(ret))
 
         ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
                 REQUEST['read_config'], wValue=0, wIndex=0,
                 data_or_wLength=array.array('B', [0, 0, 0]), timeout=1000)
-        logging.debug('ctrl_transfer: {}'.format(ret))
+        logger.debug('ctrl_transfer: {}'.format(ret))
 
     def close_board(self):
         ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
                 REQUEST['write_config'], wValue=4096, wIndex=4096,
                 data_or_wLength=array.array('B', [0, 0]), timeout=1000)
-        logging.debug('ctrl_transfer: {}'.format(ret))
+        logger.debug('ctrl_transfer: {}'.format(ret))
 
         self.reset_8051()
 
