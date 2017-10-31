@@ -70,6 +70,8 @@ target/
 tests/sim_build
 tests/results.xml
 tests/Makefile
+.dvt
+.tmp
 
 output_data
 *.lprof

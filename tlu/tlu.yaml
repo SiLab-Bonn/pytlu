@@ -20,13 +20,138 @@ hw_drivers:
     type      : i2c
     interface : intf
     base_addr : 0x4000
-
+    
+  - name      : tlu_master
+    type      : tlu.tlu_master
+    interface : intf
+    base_addr : 0x5000
+    
+  - name      : test_pulser
+    type      : pulse_gen
+    interface : intf
+    base_addr : 0x6000
+    
 registers:
-  - name        : GPIO_LED
+  - name        : I2C_MUX
     type        : StdRegister
-    hw_driver   : gpio
+    driver      : gpio
     size        : 8
     fields:
-      - name    : LED
-        size    : 8
+      - name    : SEL
+        size    : 2
+        offset  : 1
+
+  - name        : I2C_LED_CNT
+    type        : StdRegister
+    size        : 16
+    driver      : None
+    fields:
+      - name    : CH4
+        size    : 2
+        offset  : 1
+      - name    : CH3
+        size    : 2
+        offset  : 15
+      - name    : CH2
+        size    : 2
+        offset  : 13
+      - name    : CH1
+        size    : 2
+        offset  : 11
+      - name    : CH0
+        size    : 2
+        offset  : 9
+      - name    : CH5
+        size    : 2
+        offset  : 3
+        
+  - name        : I2C_LEMO_LEDS
+    type        : StdRegister
+    size        : 16
+    driver      : None
+    fields:
+      - name    : TRIG0
+        size    : 1
+        offset  : 0
+      - name    : TRIG1
+        size    : 1
+        offset  : 2
+      - name    : TRIG2
+        size    : 1
+        offset  : 4
+      - name    : TRIG3
+        size    : 1
+        offset  : 6
+      - name    : RST0
+        size    : 1
+        offset  : 8
+      - name    : BUSY0
+        size    : 1
+        offset  : 9
+      - name    : RST1
+        size    : 1
+        offset  : 10
+      - name    : BUSY1
+        size    : 1
+        offset  : 11
+      - name    : RST2
+        size    : 1
+        offset  : 12
+      - name    : BUSY2
+        size    : 1
+        offset  : 13
+      - name    : RST3
+        size    : 1
+        offset  : 14
+      - name    : BUSY3
+        size    : 1
+        offset  : 15
+        
+  - name        : I2C_TRIGGER_EN
+    type        : StdRegister
+    size        : 16
+    driver      : None
+    init:
+        LEMO:   0b1111
+        RJ45:   0b1111
+    fields:
+      - name    : LEMO
+        size    : 4
         offset  : 7
+      - name    : RJ45
+        size    : 4
+        offset  : 3
+        
+  - name        : I2C_RESET_EN
+    type        : StdRegister
+    size        : 16
+    driver      : None
+    init:
+        LEMO:   0b1111
+        RJ45:   0b1111
+    fields:
+      - name    : LEMO
+        size    : 4
+        offset  : 7
+      - name    : RJ45
+        size    : 4
+        offset  : 3
+        
+  - name        : I2C_IP_SEL
+    type        : StdRegister
+    size        : 16
+    driver      : None
+    fields:
+      - name    : A
+        size    : 2
+        offset  : 15
+      - name    : B
+        size    : 2
+        offset  : 13
+      - name    : C
+        size    : 2
+        offset  : 11
+      - name    : D
+        size    : 2
+        offset  : 9
+        
