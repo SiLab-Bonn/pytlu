@@ -24,10 +24,10 @@ module tlu_ch_rx
     
     input wire TLU_IN,
     
-    output wire VALID,
+    output reg VALID,
     output reg [7:0] LAST_RISING, LAST_FALLING,
     output wire [7:0] LAST_TOT,
-    output wire [7:0] LAST_RISING_REL
+    output reg [7:0] LAST_RISING_REL
     
 );
 
@@ -110,16 +110,21 @@ assign RISING = (RISING_EDGES_CNT > 0);
 wire [7:0] CURRENT_TIME;
 assign CURRENT_TIME = {TIME_STAMP[3:0], 4'b0};
 
-assign LAST_RISING_REL = CURRENT_TIME - LAST_RISING;
+wire [7:0] LAST_RISING_RELATIVE;
+assign LAST_RISING_RELATIVE = CURRENT_TIME - LAST_RISING;
 reg IS_LE;
 always@(posedge CLK40)
     if(RST)
         IS_LE <= 0;
     else if (RISING) 
         IS_LE <= 1;
-    else if (LAST_RISING_REL > 16*5)
+    else if (LAST_RISING_RELATIVE > 16*5)
         IS_LE <= 0;
-
-assign VALID = (EN & IS_LE & (LAST_TOT > DIG_TH) & (LAST_RISING_REL > 2*16));
     
+always@(posedge CLK40)
+    VALID <= (EN & IS_LE & (LAST_TOT > DIG_TH) & (LAST_RISING_RELATIVE > 2*16));
+
+always@(posedge CLK40)
+    LAST_RISING_REL <= LAST_RISING_RELATIVE;
+
 endmodule

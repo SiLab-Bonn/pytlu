@@ -40,7 +40,7 @@ class TestSim(unittest.TestCase):
         self.dut = Tlu(conf=cnfg)
         self.dut.init()
 
-    def _test_single_simle_mode(self):
+    def test_single_simle_mode(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 2
@@ -72,7 +72,7 @@ class TestSim(unittest.TestCase):
             
         self.check_data(how_many, tdc_en=True)
         
-    def _test_single_full_mode(self):
+    def test_single_full_mode(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 3
@@ -104,7 +104,7 @@ class TestSim(unittest.TestCase):
             
         self.check_data(how_many)
 
-    def _test_injection_test(self):
+    def test_injection_test(self):
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 3
         self.dut['TLU_TB'].TRIGGER_SELECT = 1
@@ -172,27 +172,28 @@ class TestSim(unittest.TestCase):
             
             ret = self.dut['FIFO_TB'].get_data()
             
+            #for k,w in enumerate(ret):
+            #    print k, hex(w)
+                
             self.assertEqual(ret.size, exp[i]*2)
             
             tlu_word = ret >> 31 == 1
             exp_tlu = np.arange(0x80000000 + start, 0x80000000 + start + exp[i], dtype=np.uint32)
             self.assertEqual(np.array_equal(ret[tlu_word], exp_tlu), True)
             
-            exp_tdc = np.array([0x71]*exp[i], dtype=np.uint32)
+            exp_tdc = np.array([135]*exp[i], dtype=np.uint32)
             #tdc referencee to previus
             if i != 0:
                 exp_tdc[0] = 0xff
             ret_tdc = ret[~tlu_word] >> 20
             
-            self.assertEqual(np.array_equal(ret_tdc, exp_tdc), True)
+            self.assertEqual(ret_tdc.tolist(), exp_tdc.tolist())
             
             self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, start + exp[i])
             
-        
             start += exp[i]
             
             
-
     def check_data(self, how_many, tdc_en = False, start = 0):
         
         for i in range(20):
@@ -203,11 +204,13 @@ class TestSim(unittest.TestCase):
         
         tlu_word = ret >> 31 == 1
         exp_tlu = np.arange(0x80000000, 0x80000000 + how_many, dtype=np.uint32)
-        self.assertEqual(np.array_equal(ret[tlu_word], exp_tlu), True)
+        self.assertEqual(ret[tlu_word].tolist(), exp_tlu.tolist())
         
         #distance is 0x71
         if tdc_en:
-            self.assertEqual(np.array_equal(ret[~tlu_word] >> 20, np.array([0x71]*how_many, dtype=np.uint32)), True)
+            exp_tdc = np.array([135]*how_many, dtype=np.uint32)
+            ret_tdc = ret[~tlu_word] >> 20
+            self.assertEqual((ret_tdc/2).tolist(), (exp_tdc/2).tolist())
         
         self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
         

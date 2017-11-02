@@ -76,4 +76,5 @@ tests/Makefile
 output_data
 *.lprof
 
+*.history
 .

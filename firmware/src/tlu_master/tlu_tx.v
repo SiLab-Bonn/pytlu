@@ -1,4 +1,23 @@
 
+module oddr_reg(
+    input wire CLK, 
+    input wire [1:0] DATA,
+    output wire OUT
+);
+    
+reg [1:0] REG;
+always@(posedge CLK)
+    REG <= DATA;
+
+ODDR oddr(
+    .D1(REG[0]), .D2(REG[1]), 
+    .C(CLK), .CE(1'b1), .R(1'b0), .S(1'b0),
+    .Q(OUT)
+);
+
+    
+endmodule
+
 module tlu_tx ( 
     input wire SYS_CLK, CLK320, CLK160, SYS_RST, ENABLE, TRIG,
     input wire [14:0] TRIG_ID,
@@ -49,43 +68,43 @@ always@(posedge SYS_CLK)
 assign TLU_RESET = 0;
 assign READY = (state == WAIT_STATE && TLU_CLOCK != 1'b1) || !ENABLE;
 
-reg [15:0] TRIG_DES;
+reg [7:0] TRIG_DES;
 wire [3:0] TRIG_LE_CALC;
 assign TRIG_LE_CALC = TRIG_LE -1;
 
 integer i;
 always@(posedge SYS_CLK)
-    for(i = 15; i>=0; i = i - 1)
-        TRIG_DES[i] = (i <= TRIG_LE_CALC);
+    for(i = 7; i>=0; i = i - 1)
+        TRIG_DES[i] <= (2*i <= TRIG_LE_CALC);
 
 reg TRIG_FF;
 always@(posedge SYS_CLK)
     TRIG_FF <= TRIG;
     
 reg [1:0] trig_320_sr;
-always@(posedge CLK320)
+always@(posedge CLK160)
     trig_320_sr[1:0] <= {trig_320_sr[0], TRIG_FF};
 
 wire LOAD_320;
 assign LOAD_320 = (trig_320_sr[0] == 1 && trig_320_sr[1] == 0);
 
 reg TRIG_OUT_320; 
-always@(posedge CLK320)
+always@(posedge CLK160)
     TRIG_OUT_320 <= TRIG_OUT;
     
-reg [15:0] TRIG_DES_320;
-always@(posedge CLK320)
+reg [7:0] TRIG_DES_320;
+always@(posedge CLK160)
     if(LOAD_320)
         TRIG_DES_320 <= TRIG_DES;
     else if (trig_320_sr[1])
-        TRIG_DES_320 <= {TRIG_DES_320[13:0], 2'b11};
+        TRIG_DES_320 <= {TRIG_DES_320[5:0], 2'b11};
     else
-        TRIG_DES_320[15:14] <= {2{TRIG_OUT_320}};
-        
-ODDR oddr(
-    .D1(TRIG_DES_320[14]), .D2(TRIG_DES_320[15]), 
-    .C(CLK320), .CE(1'b1), .R(1'b0), .S(1'b0),
-    .Q(TLU_TRIGGER)
-);
+        TRIG_DES_320[7:6] <= {2{TRIG_OUT_320}};
+
+oddr_reg oddr_reg(
+    .CLK(CLK160), 
+    .DATA(TRIG_DES_320[7:6]),
+    .OUT(TLU_TRIGGER)
+    );
 
 endmodule

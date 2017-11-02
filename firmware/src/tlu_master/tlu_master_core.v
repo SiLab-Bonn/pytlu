@@ -174,7 +174,7 @@ for (ch = 0; ch < 4; ch = ch + 1) begin: tlu_ch
         .TLU_IN(BEAM_TRIGGER[ch]),
         
         .DIG_TH(CONF_DIG_TH_INPUT),
-        .EN(1'b1),
+        .EN(CONF_EN_INPUT[ch]),
         
         .VALID(VALID[ch]),
         .LAST_RISING(), 
@@ -188,10 +188,10 @@ endgenerate
 reg [7:0] MIN_LE;
 integer imin;
 
-always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST_RISING_REL[3] or VALID) begin
+always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST_RISING_REL[3] or CONF_EN_INPUT) begin
     MIN_LE = 8'hff;
     for(imin = 0; imin <4; imin = imin+1) begin
-        if (VALID[imin] && LAST_RISING_REL[imin] < MIN_LE)
+        if (CONF_EN_INPUT[imin] && LAST_RISING_REL[imin] < MIN_LE)
             MIN_LE = LAST_RISING_REL[imin];
     end
 end
@@ -199,10 +199,10 @@ end
 reg [7:0] MAX_LE;
 integer imax;
 
-always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST_RISING_REL[3] or VALID)  begin
+always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST_RISING_REL[3] or CONF_EN_INPUT)  begin
     MAX_LE = 0;
     for(imax = 0; imax <4; imax = imax+1) begin
-        if (VALID[imax] && LAST_RISING_REL[imax] > MAX_LE)
+        if (CONF_EN_INPUT[imax] && LAST_RISING_REL[imax] > MAX_LE)
             MAX_LE = LAST_RISING_REL[imax];
     end
 end
@@ -210,15 +210,16 @@ end
 wire [7:0] LE_DISTANCE;
 assign LE_DISTANCE = MAX_LE - MIN_LE;
 wire GEN_TRIG;
-assign GEN_TRIG = (LE_DISTANCE < CONF_MAX_LE_DISTANCE) && (VALID == CONF_EN_INPUT) ;
+assign GEN_TRIG = ((LE_DISTANCE < CONF_MAX_LE_DISTANCE) && (VALID == CONF_EN_INPUT))  || TEST_PULSE;
 
 reg [1:0] GEN_TRIG_FF;
 always@(posedge CLK40)
-        GEN_TRIG_FF <= {GEN_TRIG_FF[0], GEN_TRIG | TEST_PULSE};
+        GEN_TRIG_FF <= {GEN_TRIG_FF[0], GEN_TRIG};
 
 wire [5:0] READY;
 wire GEN_TRIG_PULSE;
 wire TRIG_PULSE = (GEN_TRIG_FF[0] == 1 & GEN_TRIG_FF[1] == 0);
+//wire TRIG_PULSE = (GEN_TRIG_FF[0] == 0 & GEN_TRIG == 1);
 assign GEN_TRIG_PULSE =  TRIG_PULSE & (&READY);
 //TODO: skip trigger counter
 

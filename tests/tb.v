@@ -44,7 +44,9 @@ assign ZEST_BUS_ADD = BUS_ADD[15:0] + 16'h2000;
 
 wire [7:0] SEQ_OUT;
 wire [5:0] DUT_TRIGGER, DUT_RESET, DUT_BUSY, DUT_CLOCK;
-        
+wire [3:0] BEAM_TRIGGER;
+assign #100 BEAM_TRIGGER = SEQ_OUT[3:0];
+    
 wire I2C_SDA_OUT;
 tlu dut (
         .BUS_CLK_IN(BUS_CLK),
@@ -56,7 +58,7 @@ tlu dut (
         .BUS_CS_N(!(BUS_RD || BUS_WR)),
         
         
-        .BEAM_TRIGGER(SEQ_OUT[3:0]),
+        .BEAM_TRIGGER(BEAM_TRIGGER),
         .I2C_SDA_OUT(I2C_SDA_OUT),
         
         .DUT_TRIGGER(DUT_TRIGGER), .DUT_RESET(DUT_RESET), 
@@ -107,7 +109,7 @@ seq_gen
     .BUS_WR(BUS_WR),
 
     .SEQ_EXT_START(1'b0),
-    .SEQ_CLK(!CLK640),
+    .SEQ_CLK(CLK640),
     .SEQ_OUT(SEQ_OUT)
 );
 
@@ -158,7 +160,9 @@ tlu_controller #(
 wire TDC_FIFO_READ;
 wire TDC_FIFO_EMPTY;
 wire [31:0] TDC_FIFO_DATA;
-
+wire TDC_IN;
+assign #100 TDC_IN = DUT_TRIGGER[0];
+    
 tdc_s3 #(
     .BASEADDR(TDC_BASEADDR),
     .HIGHADDR(TDC_HIGHADDR),
@@ -171,9 +175,9 @@ tdc_s3 #(
     .CLK320(dut.CLK320),
     .CLK160(dut.CLK160),
     .DV_CLK(dut.CLK40),
-    .TDC_IN(DUT_TRIGGER[0]),
+    .TDC_IN(TDC_IN),
     .TDC_OUT(),
-    .TRIG_IN(SEQ_OUT[0]),
+    .TRIG_IN(BEAM_TRIGGER[0]),
     .TRIG_OUT(),
     
     .FIFO_READ(TDC_FIFO_READ),
