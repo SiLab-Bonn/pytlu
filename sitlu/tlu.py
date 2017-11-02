@@ -24,12 +24,11 @@ class Tlu(Dut):
     
     def __init__(self,conf=None):
         
+        cnfg = conf
+        logging.info("Loading configuration file from %s" % conf)
         if conf==None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
-        
-        logging.info("Loading configuration file from %s" % conf)
-        #TODO:add loading bit file 
-        
+            
         super(Tlu, self).__init__(conf)
         
     def init(self):
@@ -92,8 +91,73 @@ class Tlu(Dut):
         
         
         
-if __name__=="__main__":
+def main():
+    
+    input_ch = ['CH0','CH1','CH2', 'CH3']
+    output_ch = ['CH0','CH1','CH2', 'CH3','CH4','CH5','LEMO0', 'LEMO1', 'LEMO2', 'LEMO3']
+    
+    def th_type(x):
+        if int(x) > 31 or int(x) < 0:
+            raise argparse.ArgumentTypeError("Threshold is 0 to 31")
+        return x
+    
+    parser = argparse.ArgumentParser(description='TLU DAQ \n example: sitlu -ie CH0 -oe CH0', formatter_class=argparse.RawTextHelpFormatter)
+    
+    parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
+                        help='Enabel input channels. Allowed values are '+', '.join(input_ch), metavar='CHx')
+    parser.add_argument('-oe','--output_enable', nargs='+', type=str, choices=output_ch, required=True,
+                        help='Enabel ouput channels. CHx and LEM0x are exclusiove. Allowed values are '+', '.join(output_ch), metavar='CHx/LEMOx')
+    parser.add_argument('-th', '--threshold', type=th_type, default=0, help="Digital threshold for input (in units of 1.5625ns).",metavar='0...31')
+    parser.add_argument('-ds', '--distance', type=th_type, default=31, help="Maximum distance betwean inputs rise time (in units of 1.5625ns).",metavar='0...31')
+    parser.add_argument('-t', '--test', type=int, help="Generate triggers with given distance.", metavar='1...n')
+    parser.add_argument('-c', '--count', type=int, default=0, help="How many triggers. 0=infinite", metavar='0...n')
+    parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout.", metavar='0...65535')
+    args = parser.parse_args()
+    
     chip = Tlu()
+
+    #TODO: check LEMOx and CHx are exlusive 
+    for oe in args.output_enable:
+        if oe[0] == 'C':
+            chip['I2C_LED_CNT'][oe] = 3
+        else:#LEMO
+            chip['I2C_LEMO_LEDS']['BUSY'+oe[-1]] = 1
+            chip['I2C_LEMO_LEDS']['TRIG'+oe[-1]] = 1
+            chip['I2C_LEMO_LEDS']['RST'+oe[-1]] = 1
+            
+    #TODO: Muxes
+    
     chip.init()
-   
-    #TODO: make it work add setup arguments
+    
+    chip['tlu_master'].MAX_DISTANCE = args.distance
+    chip['tlu_master'].THRESHOLD = args.threshold
+    chip['tlu_master'].TIMEOUT = args.timeout
+        
+    in_en = 0
+    for ie in args.input_enable:
+        in_en = in_en | (0x01 << int(ie[-1]))
+    
+    chip['tlu_master'].EN_INPUT = in_en
+    
+    out_en = 0
+    for oe in args.output_enable:
+        out_en = out_en | (0x01 << int(oe[-1]))
+        
+    chip['tlu_master'].EN_OUTPUT = out_en
+    
+    if args.test:
+        logging.info("Starting test...")
+        
+        chip['test_pulser'].DELAY = args.test
+        chip['test_pulser'].WIDTH = 1
+        chip['test_pulser'].REPEAT = args.count
+        chip['test_pulser'].START
+        
+        while(not chip['test_pulser'].is_ready):
+            print chip['tlu_master'].TRIGGER_ID
+        
+        print chip['tlu_master'].TRIGGER_ID
+        
+if __name__ == '__main__':
+    main()
+

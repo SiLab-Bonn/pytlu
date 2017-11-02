@@ -4,10 +4,10 @@ from setuptools import setup
 from setuptools import find_packages
 from platform import system
 
-version = '0.0.1'
+version = '0.0.2'
 
 setup(
-    name='TLU',
+    name='sitlu',
     version=version,
     description='DAQ for TLU',
     url='https://github.com/SiLab-Bonn/tlu',
@@ -20,6 +20,11 @@ setup(
     install_requires=['basil-daq'],
     packages=find_packages(),
     include_package_data=True,  
-    package_data={'': ['README.*', 'VERSION'], 'docs': ['*'], 'tlu': ['*.yaml', '*.bit']},
+    package_data={'': ['README.*', 'VERSION'], 'docs': ['*'], 'sitlu': ['*.yaml', '*.bit']},
+    entry_points={
+        'console_scripts': [
+            'sitlu = sitlu.tlu:main',
+        ]
+    },
     platforms='any'
 )

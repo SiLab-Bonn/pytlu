@@ -22,12 +22,13 @@ class tlu_master(RegisterHardwareLayer):
                   'MAX_DISTANCE':       {'descr': {'addr': 4, 'size': 5, 'offset': 0}},
                   'THRESHOLD':          {'descr': {'addr': 5, 'size': 5, 'offset': 0}},
                   'EN_OUTPUT':          {'descr': {'addr': 6, 'size': 6, 'offset': 0}},
+                  
+                  'TIMEOUT':            {'descr': {'addr': 7, 'size': 16, 'offset': 0}},
                  
-                 'TIME_STAMP': {'descr': {'addr': 8, 'size': 64, 'properties': ['ro']}},
-                 'TRIGGER_ID': {'descr': {'addr': 16, 'size': 32, 'properties': ['ro']}},
-                 'SKIIP_TRIGGER_COUNT': {'descr': {'addr': 20, 'size': 8, 'properties': ['ro']}},
-                 
-                  'LOST_COUNT': {'descr': {'addr': 6, 'size': 8, 'properties': ['ro']}}
+                 'TIME_STAMP': {'descr': {'addr': 16, 'size': 64, 'properties': ['ro']}},
+                 'TRIGGER_ID': {'descr': {'addr': 24, 'size': 32, 'properties': ['ro']}},
+                 'SKIIP_TRIGGER_COUNT': {'descr': {'addr': 28, 'size': 8, 'properties': ['ro']}},
+
                   }
     
     _require_version = "==1"

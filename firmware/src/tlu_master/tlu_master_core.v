@@ -43,7 +43,7 @@ assign START = (BUS_ADD==1 && BUS_WR);
 wire RST;
 assign RST = BUS_RST | SOFT_RST; 
 
-reg [7:0] status_regs[6:0];
+reg [7:0] status_regs[8:0];
 
 wire CONF_DONE;
 wire [3:0] CONF_EN_INPUT;
@@ -58,6 +58,9 @@ assign CONF_DIG_TH_INPUT = status_regs[5][4:0];
 wire [5:0] CONF_EN_OUTPUT;
 assign CONF_EN_OUTPUT = status_regs[6][5:0];
 reg [7:0] SKIP_TRIG_COUNTER;
+
+wire [15:0] CONF_TIME_OUT;
+assign CONF_TIME_OUT = {status_regs[8], status_regs[7]};
     
 reg [63:0] TIME_STAMP;
 reg [31:0] TRIG_ID;
@@ -75,9 +78,11 @@ always @(posedge BUS_CLK) begin
         status_regs[4] <= 8'b0;
 		status_regs[5] <= 8'b0;
         status_regs[6] <= 8'b0;
+        status_regs[7] <= 8'hff; //TIMEOUT
+        status_regs[8] <= 8'hff;
     end
-    else if(BUS_WR && BUS_ADD < 8)
-        status_regs[BUS_ADD[2:0]] <= BUS_DATA_IN;
+    else if(BUS_WR && BUS_ADD < 9)
+        status_regs[BUS_ADD[3:0]] <= BUS_DATA_IN;
 end
 
 always @(posedge BUS_CLK) begin
@@ -96,31 +101,36 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= {3'b0, CONF_DIG_TH_INPUT};
         else if(BUS_ADD == 6)
             BUS_DATA_OUT <= {2'b0, CONF_EN_OUTPUT};
-        else if(BUS_ADD == 8)
-            BUS_DATA_OUT <= TIME_STAMP[7:0];
-        else if(BUS_ADD == 9)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[15:8];
-        else if(BUS_ADD == 10)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[23:16];
-        else if(BUS_ADD == 11)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[31:24];
-        else if(BUS_ADD == 12)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[39:32];
-        else if(BUS_ADD == 13)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[47:40];
-        else if(BUS_ADD == 14)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[55:48];
-        else if(BUS_ADD == 15)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[63:56];
+        else if(BUS_ADD == 7)
+            BUS_DATA_OUT <= CONF_TIME_OUT[7:0];
+         else if(BUS_ADD == 8)
+            BUS_DATA_OUT <= CONF_TIME_OUT[15:8];
+         
         else if(BUS_ADD == 16)
-            BUS_DATA_OUT <= TRIG_ID[7:0];
+            BUS_DATA_OUT <= TIME_STAMP[7:0];
         else if(BUS_ADD == 17)
-            BUS_DATA_OUT <= TRIG_ID_BUF[15:8];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[15:8];
         else if(BUS_ADD == 18)
+            BUS_DATA_OUT <= TIME_STAMP_BUF[23:16];
+        else if(BUS_ADD == 19)
+            BUS_DATA_OUT <= TIME_STAMP_BUF[31:24];
+        else if(BUS_ADD == 20)
+            BUS_DATA_OUT <= TIME_STAMP_BUF[39:32];
+        else if(BUS_ADD == 21)
+            BUS_DATA_OUT <= TIME_STAMP_BUF[47:40];
+        else if(BUS_ADD == 22)
+            BUS_DATA_OUT <= TIME_STAMP_BUF[55:48];
+        else if(BUS_ADD == 23)
+            BUS_DATA_OUT <= TIME_STAMP_BUF[63:56];
+        else if(BUS_ADD == 24)
+            BUS_DATA_OUT <= TRIG_ID[7:0];
+        else if(BUS_ADD == 25)
+            BUS_DATA_OUT <= TRIG_ID_BUF[15:8];
+        else if(BUS_ADD == 26)
             BUS_DATA_OUT <= TRIG_ID_BUF[23:16];
-        else if(BUS_ADD == 19)
+        else if(BUS_ADD == 27)
             BUS_DATA_OUT <= TRIG_ID_BUF[31:24];
-        else if(BUS_ADD == 19)
+        else if(BUS_ADD == 28)
             BUS_DATA_OUT <= SKIP_TRIG_COUNTER;
         
         else
@@ -252,6 +262,7 @@ for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
         .TRIG(GEN_TRIG_PULSE),
         .TRIG_ID(TRIG_ID[14:0]),
         .READY(READY[dut_ch]),
+        .CONF_TIME_OUT(CONF_TIME_OUT),
         
         .TLU_CLOCK(DUT_CLOCK[dut_ch]), .TLU_BUSY(DUT_BUSY[dut_ch]),
         .TLU_TRIGGER(DUT_TRIGGER[dut_ch]), .TLU_RESET(DUT_RESET[dut_ch])

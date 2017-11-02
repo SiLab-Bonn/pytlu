@@ -13,7 +13,7 @@ import yaml
 import time
 import numpy as np
 
-from tlu.tlu import Tlu
+from sitlu.tlu import Tlu
 
 class TestSim(unittest.TestCase):
 
@@ -26,7 +26,7 @@ class TestSim(unittest.TestCase):
             include_dirs = (root_dir, root_dir + "/firmware/src")
         )
        
-        with open(root_dir + '/tlu/tlu.yaml', 'r') as f:
+        with open(root_dir + '/sitlu/tlu.yaml', 'r') as f:
             cnfg = yaml.load(f)
         cnfg['transfer_layer'][0]['type'] = 'SiSim'
         cnfg['hw_drivers'].append({'name' : 'SEQ_GEN_TB', 'type' : 'seq_gen', 'interface': 'intf', 'base_addr': 0xc000})
@@ -40,7 +40,7 @@ class TestSim(unittest.TestCase):
         self.dut = Tlu(conf=cnfg)
         self.dut.init()
 
-    def test_single_simle_mode(self):
+    def _test_single_simle_mode(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 2
@@ -72,7 +72,7 @@ class TestSim(unittest.TestCase):
             
         self.check_data(how_many, tdc_en=True)
         
-    def test_single_full_mode(self):
+    def _test_single_full_mode(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 3
@@ -116,6 +116,7 @@ class TestSim(unittest.TestCase):
         self.dut['tlu_master'].MAX_DISTANCE = 10
         self.dut['tlu_master'].THRESHOLD = 0
         self.dut['tlu_master'].EN_OUTPUT = 1
+        #self.dut['tlu_master'].TIMEOUT = 3
         
         how_many = 50
         self.dut['test_pulser'].DELAY = 200
@@ -128,7 +129,7 @@ class TestSim(unittest.TestCase):
         
         self.check_data(how_many)
         
-    def test_digital_threshold(self):
+    def _test_digital_threshold(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 2
@@ -216,6 +217,12 @@ class TestSim(unittest.TestCase):
         
         return ret
 
+    def _test_timeout(self):
+        pass
+    
+    def _test_multi_input_distance(self):
+        pass
+    
     def tearDown(self):
         self.dut.close()
         time.sleep(1)

@@ -33,10 +33,6 @@ module tlu_ch_rx
 
 
 
-
-
-
-
 // de-serialize
 wire [CLKDV*4-1:0] TDC, TDC_DES;
 reg  [CLKDV*4-1:0] TDC_DES_PREV;

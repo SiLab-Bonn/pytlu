@@ -7,8 +7,8 @@
 
 transfer_layer:
   - name  : intf
-    type  : tlu.ZestSC1TL    init:
-        bit_file : ../firmware/ise/tlu.bit
+    type  : sitlu.ZestSC1TL    init:
+        bit_file : tlu.bit
 hw_drivers:
   - name      : gpio
     type      : gpio
@@ -22,7 +22,7 @@ hw_drivers:
     base_addr : 0x4000
     
   - name      : tlu_master
-    type      : tlu.tlu_master
+    type      : sitlu.tlu_master
     interface : intf
     base_addr : 0x5000
     

@@ -23,9 +23,14 @@ module tlu_tx (
     input wire [14:0] TRIG_ID,
     output wire READY,
     input wire [3:0] TRIG_LE,
+    input wire [15:0] CONF_TIME_OUT,
+    
     input wire TLU_CLOCK, TLU_BUSY,
     output wire TLU_TRIGGER, TLU_RESET
 );
+
+//TODO: Timeout
+wire TIME_OUT;
 
 localparam WAIT_STATE = 0, TRIG_STATE = 1, READ_ID_STATE = 2;
 
@@ -44,7 +49,9 @@ always@(*) begin
             if(TRIG)
                 state_next = TRIG_STATE;
         TRIG_STATE:
-            if(TLU_BUSY)
+            if(TIME_OUT)
+                state_next = WAIT_STATE;
+            else if(TLU_BUSY )
                 state_next = READ_ID_STATE;
         READ_ID_STATE:
             if(!TLU_BUSY)
@@ -68,6 +75,18 @@ always@(posedge SYS_CLK)
 assign TLU_RESET = 0;
 assign READY = (state == WAIT_STATE && TLU_CLOCK != 1'b1) || !ENABLE;
 
+reg [15:0] TIME_OUT_CNT;
+always@(posedge SYS_CLK) begin
+    if(SYS_RST)
+        TIME_OUT_CNT <= 0;
+    else if(TRIG)
+        TIME_OUT_CNT <= CONF_TIME_OUT;
+    else if(TIME_OUT_CNT != 0)
+        TIME_OUT_CNT <= TIME_OUT_CNT -1;
+end
+
+assign TIME_OUT = (TIME_OUT_CNT == 0);
+
 reg [7:0] TRIG_DES;
 wire [3:0] TRIG_LE_CALC;
 assign TRIG_LE_CALC = TRIG_LE -1;
@@ -81,29 +100,29 @@ reg TRIG_FF;
 always@(posedge SYS_CLK)
     TRIG_FF <= TRIG;
     
-reg [1:0] trig_320_sr;
+reg [1:0] trig_des_sr;
 always@(posedge CLK160)
-    trig_320_sr[1:0] <= {trig_320_sr[0], TRIG_FF};
+    trig_des_sr[1:0] <= {trig_des_sr[0], TRIG_FF};
 
-wire LOAD_320;
-assign LOAD_320 = (trig_320_sr[0] == 1 && trig_320_sr[1] == 0);
+wire LOAD_DES;
+assign LOAD_DES = (trig_des_sr[0] == 1 && trig_des_sr[1] == 0);
 
-reg TRIG_OUT_320; 
+reg TRIG_OUT_DES; 
 always@(posedge CLK160)
-    TRIG_OUT_320 <= TRIG_OUT;
+    TRIG_OUT_DES <= TRIG_OUT;
     
-reg [7:0] TRIG_DES_320;
+reg [7:0] TRIG_DES_OUT;
 always@(posedge CLK160)
-    if(LOAD_320)
-        TRIG_DES_320 <= TRIG_DES;
-    else if (trig_320_sr[1])
-        TRIG_DES_320 <= {TRIG_DES_320[5:0], 2'b11};
+    if(LOAD_DES)
+        TRIG_DES_OUT <= TRIG_DES;
+    else if (trig_des_sr[1])
+        TRIG_DES_OUT <= {TRIG_DES_OUT[5:0], 2'b11};
     else
-        TRIG_DES_320[7:6] <= {2{TRIG_OUT_320}};
+        TRIG_DES_OUT[7:6] <= {2{TRIG_OUT_DES}};
 
 oddr_reg oddr_reg(
     .CLK(CLK160), 
-    .DATA(TRIG_DES_320[7:6]),
+    .DATA(TRIG_DES_OUT[7:6]),
     .OUT(TLU_TRIGGER)
     );
 
