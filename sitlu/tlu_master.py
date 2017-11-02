@@ -27,7 +27,7 @@ class tlu_master(RegisterHardwareLayer):
                  
                  'TIME_STAMP': {'descr': {'addr': 16, 'size': 64, 'properties': ['ro']}},
                  'TRIGGER_ID': {'descr': {'addr': 24, 'size': 32, 'properties': ['ro']}},
-                 'SKIIP_TRIGGER_COUNT': {'descr': {'addr': 28, 'size': 8, 'properties': ['ro']}},
+                 'SKIP_TRIGGER_COUNT': {'descr': {'addr': 28, 'size': 8, 'properties': ['ro']}},
 
                   }
     

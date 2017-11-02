@@ -153,11 +153,15 @@ def main():
         chip['test_pulser'].REPEAT = args.count
         chip['test_pulser'].START
         
+        def print_log(): 
+            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID,  chip['tlu_master'].TIME_STAMP))
+        
+        start_time = time.time()
         while(not chip['test_pulser'].is_ready):
-            print chip['tlu_master'].TRIGGER_ID
-        
-        print chip['tlu_master'].TRIGGER_ID
-        
+            print_log()
+            time.sleep(1)
+        print_log()
+            
 if __name__ == '__main__':
     main()
 

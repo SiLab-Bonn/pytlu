@@ -40,7 +40,7 @@ class TestSim(unittest.TestCase):
         self.dut = Tlu(conf=cnfg)
         self.dut.init()
 
-    def _test_single_simle_mode(self):
+    def test_single_simle_mode(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 2
@@ -72,7 +72,7 @@ class TestSim(unittest.TestCase):
             
         self.check_data(how_many, tdc_en=True)
         
-    def _test_single_full_mode(self):
+    def test_single_full_mode(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 3
@@ -129,7 +129,7 @@ class TestSim(unittest.TestCase):
         
         self.check_data(how_many)
         
-    def _test_digital_threshold(self):
+    def test_digital_threshold(self):
         
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 2
@@ -217,9 +217,30 @@ class TestSim(unittest.TestCase):
         
         return ret
 
-    def _test_timeout(self):
-        pass
-    
+    def test_timeout(self):
+        self.dut['tlu_master'].EN_INPUT = 0
+        self.dut['tlu_master'].MAX_DISTANCE = 31
+        self.dut['tlu_master'].THRESHOLD = 0
+        self.dut['tlu_master'].EN_OUTPUT = 1
+        self.dut['tlu_master'].TIMEOUT = 5
+        
+        self.dut['TDC_TB'].EN_TRIGGER_DIST = 1
+        self.dut['TDC_TB'].ENABLE = 1
+        
+        how_many = 300
+        self.dut['test_pulser'].DELAY = 20
+        self.dut['test_pulser'].WIDTH = 1
+        self.dut['test_pulser'].REPEAT = how_many
+        self.dut['test_pulser'].START
+
+        while(not self.dut['test_pulser'].is_ready):
+            #print self.dut['tlu_master'].TRIGGER_ID
+            pass
+        
+        ret = self.dut['FIFO_TB'].get_data()
+        self.assertEqual(ret.size, how_many)
+        self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
+       
     def _test_multi_input_distance(self):
         pass
     

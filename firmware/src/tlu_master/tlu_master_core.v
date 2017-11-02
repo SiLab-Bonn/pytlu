@@ -142,13 +142,13 @@ end
 always @ (posedge BUS_CLK) begin
     if (RST)
         TIME_STAMP_BUF <= 32'b0;
-    else if (BUS_ADD == 8 && BUS_RD)
+    else if (BUS_ADD == 16 && BUS_RD)
             TIME_STAMP_BUF <= TIME_STAMP;
 end
 always @ (posedge BUS_CLK) begin
     if (RST)
         TRIG_ID_BUF <= 32'b0;
-    else if (BUS_ADD == 12 && BUS_RD)
+    else if (BUS_ADD == 24 && BUS_RD)
             TRIG_ID_BUF <= TRIG_ID;
 end
 
@@ -220,7 +220,7 @@ end
 wire [7:0] LE_DISTANCE;
 assign LE_DISTANCE = MAX_LE - MIN_LE;
 wire GEN_TRIG;
-assign GEN_TRIG = ((LE_DISTANCE < CONF_MAX_LE_DISTANCE) && (VALID == CONF_EN_INPUT))  || TEST_PULSE;
+assign GEN_TRIG = ((LE_DISTANCE < CONF_MAX_LE_DISTANCE) && (VALID == CONF_EN_INPUT) && (CONF_EN_INPUT > 0))  || TEST_PULSE;
 
 reg [1:0] GEN_TRIG_FF;
 always@(posedge CLK40)
