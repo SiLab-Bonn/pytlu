@@ -141,17 +141,22 @@ registers:
     type        : StdRegister
     size        : 16
     driver      : None
+    init:
+        '0':   0b11
+        '1':   0b11
+        '2':   0b11
+        '3':   0b11
     fields:
-      - name    : A
+      - name    : '0'
         size    : 2
         offset  : 15
-      - name    : B
+      - name    : '1'
         size    : 2
         offset  : 13
-      - name    : C
+      - name    : '2'
         size    : 2
         offset  : 11
-      - name    : D
+      - name    : '3'
         size    : 2
         offset  : 9
         

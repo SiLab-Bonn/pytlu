@@ -20,7 +20,7 @@ class Tlu(Dut):
     I2C_MUX = {'DISPLAY': 0 ,'LEMO': 1, 'HDMI': 2, 'MB': 3}
     I2C_ADDR = {'LED': 0x40, 'TRIGGER_EN': 0x42, 'RESET_EN': 0x44, 'IPSEL': 0x46}
     PCA9555 = {'DIR': 6, 'OUT': 2}
-    IP_SEL = {'RJ45': 0, 'LEMO': 2}
+    IP_SEL = {'RJ45': 0b11, 'LEMO': 0b10}
     
     def __init__(self,conf=None):
         
@@ -30,7 +30,7 @@ class Tlu(Dut):
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
             
         super(Tlu, self).__init__(conf)
-        
+
     def init(self):
         super(Tlu, self).init()
         
@@ -39,7 +39,9 @@ class Tlu(Dut):
         if fw_version != self.VERSION:       
             raise Exception("TLU firmware version does not satisfy version requirements (read: %s, require: %s)" % ( fw_version, self.VERSION))
 
-        #LEDS OFF
+        self.write_i2c_config()
+        
+    def write_i2c_config(self):
         self.write_rj45_leds()
         self.write_lemo_leds()
         self.write_trigger_en()
@@ -89,8 +91,6 @@ class Tlu(Dut):
         val = self['I2C_IP_SEL'].tobytes().tolist()
         self['i2c'].write(self.I2C_ADDR['IPSEL'], [self.PCA9555['OUT'], val[0] & 0xff, val[1] & 0xff])
         
-        
-        
 def main():
     
     input_ch = ['CH0','CH1','CH2', 'CH3']
@@ -115,8 +115,13 @@ def main():
     args = parser.parse_args()
     
     chip = Tlu()
+    chip.init()
 
-    #TODO: check LEMOx and CHx are exlusive 
+    ch_no = [int(x[-1]) for x in args.output_enable]
+    for i in range(4):
+        if ch_no.count(i) > 1:
+            raise argparse.ArgumentTypeError("Output channels. CHx and LEM0x are exclusiove")
+
     for oe in args.output_enable:
         if oe[0] == 'C':
             chip['I2C_LED_CNT'][oe] = 3
@@ -124,10 +129,11 @@ def main():
             chip['I2C_LEMO_LEDS']['BUSY'+oe[-1]] = 1
             chip['I2C_LEMO_LEDS']['TRIG'+oe[-1]] = 1
             chip['I2C_LEMO_LEDS']['RST'+oe[-1]] = 1
-            
-    #TODO: Muxes
     
-    chip.init()
+    for oe in args.output_enable:
+        chip['I2C_IP_SEL'][oe[-1]] = chip.IP_SEL['RJ45'] if oe[0] == 'C' else chip.IP_SEL['LEMO']
+
+    chip.write_i2c_config()
     
     chip['tlu_master'].MAX_DISTANCE = args.distance
     chip['tlu_master'].THRESHOLD = args.threshold
