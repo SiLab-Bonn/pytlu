@@ -201,6 +201,10 @@ class TestSim(unittest.TestCase):
             self.dut['SEQ_TB'].is_ready
         
         ret = self.dut['FIFO_TB'].get_data()
+        
+        #for k,w in enumerate(ret):
+        #    print k, hex(w)
+            
         self.assertEqual(ret.size, how_many * (tdc_en+1))
         
         tlu_word = ret >> 31 == 1

@@ -13,6 +13,8 @@ logging.getLogger().setLevel(logging.DEBUG)
 import os
 import time
 import argparse
+import signal
+signal.signal(signal.SIGINT, signal.default_int_handler)
 
 class Tlu(Dut):
     
@@ -99,7 +101,7 @@ def main():
     def th_type(x):
         if int(x) > 31 or int(x) < 0:
             raise argparse.ArgumentTypeError("Threshold is 0 to 31")
-        return x
+        return int(x)
     
     parser = argparse.ArgumentParser(description='TLU DAQ \n example: sitlu -ie CH0 -oe CH0', formatter_class=argparse.RawTextHelpFormatter)
     
@@ -107,11 +109,14 @@ def main():
                         help='Enabel input channels. Allowed values are '+', '.join(input_ch), metavar='CHx')
     parser.add_argument('-oe','--output_enable', nargs='+', type=str, choices=output_ch, required=True,
                         help='Enabel ouput channels. CHx and LEM0x are exclusiove. Allowed values are '+', '.join(output_ch), metavar='CHx/LEMOx')
-    parser.add_argument('-th', '--threshold', type=th_type, default=0, help="Digital threshold for input (in units of 1.5625ns).",metavar='0...31')
-    parser.add_argument('-ds', '--distance', type=th_type, default=31, help="Maximum distance betwean inputs rise time (in units of 1.5625ns).",metavar='0...31')
+    parser.add_argument('-th', '--threshold', type=th_type, default=0, help="Digital threshold for input (in units of 1.5625ns). default=0",metavar='0...31')
+    parser.add_argument('-ds', '--distance', type=th_type, default=31, help="Maximum distance betwean inputs rise time (in units of 1.5625ns). default=31",metavar='0...31')
     parser.add_argument('-t', '--test', type=int, help="Generate triggers with given distance.", metavar='1...n')
-    parser.add_argument('-c', '--count', type=int, default=0, help="How many triggers. 0=infinite", metavar='0...n')
-    parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout.", metavar='0...65535')
+    parser.add_argument('-c', '--count', type=int, default=0, help="How many triggers. 0=infinite (default) ", metavar='0...n')
+    parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout. default=65535", metavar='0...65535')
+    parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
+                        help='Invert input. Allowed values are '+', '.join(input_ch), metavar='CHx')
+    
     args = parser.parse_args()
     
     chip = Tlu()
@@ -131,7 +136,9 @@ def main():
             chip['I2C_LEMO_LEDS']['RST'+oe[-1]] = 1
     
     for oe in args.output_enable:
-        chip['I2C_IP_SEL'][oe[-1]] = chip.IP_SEL['RJ45'] if oe[0] == 'C' else chip.IP_SEL['LEMO']
+        no = oe[-1]
+        if no < 4:
+            chip['I2C_IP_SEL'][no] = chip.IP_SEL['RJ45'] if oe[0] == 'C' else chip.IP_SEL['LEMO']
 
     chip.write_i2c_config()
     
@@ -145,12 +152,21 @@ def main():
     
     chip['tlu_master'].EN_INPUT = in_en
     
+    in_inv = 0
+    for ie in args.input_invert:
+        in_inv = in_inv | (0x01 << int(ie[-1]))
+    
+    chip['tlu_master'].INVERT_INPUT = in_inv
+    
     out_en = 0
     for oe in args.output_enable:
         out_en = out_en | (0x01 << int(oe[-1]))
         
     chip['tlu_master'].EN_OUTPUT = out_en
     
+    def print_log(): 
+            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skiped: %2d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT))
+        
     if args.test:
         logging.info("Starting test...")
         
@@ -159,14 +175,22 @@ def main():
         chip['test_pulser'].REPEAT = args.count
         chip['test_pulser'].START
         
-        def print_log(): 
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID,  chip['tlu_master'].TIME_STAMP))
-        
         start_time = time.time()
         while(not chip['test_pulser'].is_ready):
             print_log()
             time.sleep(1)
         print_log()
+        return
+    
+    logging.info("Starting ... Ctrl+C to exit")
+    start_time = time.time()
+    while True:
+        try:
+            print_log()
+            time.sleep(1)
+        except KeyboardInterrupt:
+            print_log()
+            return
             
 if __name__ == '__main__':
     main()

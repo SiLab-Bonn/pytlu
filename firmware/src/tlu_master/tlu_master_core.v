@@ -231,7 +231,6 @@ wire GEN_TRIG_PULSE;
 wire TRIG_PULSE = (GEN_TRIG_FF[0] == 1 & GEN_TRIG_FF[1] == 0);
 //wire TRIG_PULSE = (GEN_TRIG_FF[0] == 0 & GEN_TRIG == 1);
 assign GEN_TRIG_PULSE =  TRIG_PULSE & (&READY);
-//TODO: skip trigger counter
 
 wire SKIP_TRIGGER = TRIG_PULSE & !GEN_TRIG_PULSE;
 
@@ -244,31 +243,41 @@ always@(posedge CLK40)
 
 always@(posedge CLK40)
     if(RST_SYNC | START_SYNC)
-        TRIG_ID <= 0;
+        TRIG_ID <= 0; //32'h3fff-10;
     else if(GEN_TRIG_PULSE && TRIG_ID!=32'hffffffff )
         TRIG_ID <= TRIG_ID + 1;
-    
+
+reg [31:0] TRIG_ID_FF;
+always@(posedge CLK40)
+    TRIG_ID_FF <= TRIG_ID;
+        
+localparam INV_OUT = 6'b101010;
 genvar dut_ch;
 generate
 for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
-    tlu_tx tlu_tx( 
-        .SYS_CLK(CLK40), 
-        .CLK320(CLK320),
-        .CLK160(CLK160),
-        
-        .TRIG_LE(MAX_LE[3:0]), 
-        .SYS_RST(RST_SYNC), 
-        .ENABLE(CONF_EN_OUTPUT[dut_ch]), 
-        .TRIG(GEN_TRIG_PULSE),
-        .TRIG_ID(TRIG_ID[14:0]),
-        .READY(READY[dut_ch]),
-        .CONF_TIME_OUT(CONF_TIME_OUT),
-        
-        .TLU_CLOCK(DUT_CLOCK[dut_ch]), .TLU_BUSY(DUT_BUSY[dut_ch]),
-        .TLU_TRIGGER(DUT_TRIGGER[dut_ch]), .TLU_RESET(DUT_RESET[dut_ch])
+    tlu_tx 
+        #(
+            .INV_OUT(INV_OUT[dut_ch])
+        ) 
+        tlu_tx( 
+            .SYS_CLK(CLK40), 
+            .CLK320(CLK320),
+            .CLK160(CLK160),
+            
+            .TRIG_LE(MAX_LE[3:0]), 
+            .SYS_RST(RST_SYNC), 
+            .ENABLE(CONF_EN_OUTPUT[dut_ch]), 
+            .TRIG(GEN_TRIG_PULSE),
+            .TRIG_ID(TRIG_ID_FF[14:0]),
+            .READY(READY[dut_ch]),
+            .CONF_TIME_OUT(CONF_TIME_OUT),
+            
+            .TLU_CLOCK(DUT_CLOCK[dut_ch]), .TLU_BUSY(DUT_BUSY[dut_ch]),
+            .TLU_TRIGGER(DUT_TRIGGER[dut_ch]), .TLU_RESET(DUT_RESET[dut_ch])
         );
 end
 endgenerate 
 
+//assign DUT_RESET = {2'b0,SKIP_TRIGGER ,&READY, DUT_BUSY[0], GEN_TRIG_PULSE} ;
 
 endmodule

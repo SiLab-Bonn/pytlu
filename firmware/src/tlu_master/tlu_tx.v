@@ -1,5 +1,6 @@
 
-module oddr_reg(
+module oddr_reg
+(
     input wire CLK, 
     input wire [1:0] DATA,
     output wire OUT
@@ -18,7 +19,10 @@ ODDR oddr(
     
 endmodule
 
-module tlu_tx ( 
+module tlu_tx 
+#(
+    parameter INV_OUT = 0
+)( 
     input wire SYS_CLK, CLK320, CLK160, SYS_RST, ENABLE, TRIG,
     input wire [14:0] TRIG_ID,
     output wire READY,
@@ -29,17 +33,22 @@ module tlu_tx (
     output wire TLU_TRIGGER, TLU_RESET
 );
 
+
 //TODO: Timeout
 wire TIME_OUT;
+reg TRIG_FF;
+localparam WAIT_STATE = 3'b001, TRIG_STATE =3'b010, READ_ID_STATE = 3'b100;
 
-localparam WAIT_STATE = 0, TRIG_STATE = 1, READ_ID_STATE = 2;
-
-reg [1:0] state, state_next;
+reg [2:0] state, state_next;
 always@(posedge SYS_CLK)
     if(SYS_RST)
         state <= WAIT_STATE;
     else
         state <= state_next;
+
+reg BUSY_FF;
+always@(posedge SYS_CLK)
+    BUSY_FF <= INV_OUT ? ~TLU_BUSY : TLU_BUSY;
 
 always@(*) begin
     state_next = state;
@@ -51,29 +60,43 @@ always@(*) begin
         TRIG_STATE:
             if(TIME_OUT)
                 state_next = WAIT_STATE;
-            else if(TLU_BUSY )
+            else if(BUSY_FF)
                 state_next = READ_ID_STATE;
         READ_ID_STATE:
-            if(!TLU_BUSY)
+            if(!BUSY_FF)
                 state_next = WAIT_STATE;
         default : state_next = WAIT_STATE;
     endcase
 end
 
+wire TLU_CLOCK_REAL;
+assign TLU_CLOCK_REAL = INV_OUT ? ~TLU_CLOCK : TLU_CLOCK;
+
 reg [15:0] TRIG_ID_SR;
 initial TRIG_ID_SR = 0;
-always@(posedge TLU_CLOCK or posedge TRIG)
-    if(TRIG)
+always@(posedge TLU_CLOCK_REAL or posedge TRIG_FF)
+    if(TRIG_FF)
         TRIG_ID_SR <= {TRIG_ID, 1'b0};
     else
         TRIG_ID_SR <= {1'b0, TRIG_ID_SR[15:1]};
 
-reg TRIG_OUT;
-always@(posedge SYS_CLK)
-    TRIG_OUT = (state == TRIG_STATE) || (state_next == TRIG_STATE) || (TRIG_ID_SR[0] & TLU_BUSY);
+reg [31:0] WAIT_CNT;
+always@(posedge SYS_CLK) begin
+    if(SYS_RST)
+        WAIT_CNT <= 0;
+    else if(state == READ_ID_STATE && state_next == WAIT_STATE)
+        WAIT_CNT <= 4;
+    else if(WAIT_CNT != 0)
+        WAIT_CNT <= WAIT_CNT - 1;
+end
 
-assign TLU_RESET = 0;
-assign READY = (state == WAIT_STATE && TLU_CLOCK != 1'b1) || !ENABLE;
+reg TRIG_OUT;
+always@(*) //posedge SYS_CLK)
+    TRIG_OUT = (state == TRIG_STATE) || TRIG_ID_SR[0];
+
+assign TLU_RESET = INV_OUT ? 1'b0 : 1'b0;
+
+assign READY = (state == WAIT_STATE  && TLU_CLOCK_REAL == 0  && WAIT_CNT==0) || !ENABLE;
 
 reg [15:0] TIME_OUT_CNT;
 always@(posedge SYS_CLK) begin
@@ -96,7 +119,7 @@ always@(posedge SYS_CLK)
     for(i = 7; i>=0; i = i - 1)
         TRIG_DES[i] <= (2*i <= TRIG_LE_CALC);
 
-reg TRIG_FF;
+
 always@(posedge SYS_CLK)
     TRIG_FF <= TRIG;
     
@@ -120,9 +143,12 @@ always@(posedge CLK160)
     else
         TRIG_DES_OUT[7:6] <= {2{TRIG_OUT_DES}};
 
+wire [1:0] TO_ODDR ;
+assign TO_ODDR = INV_OUT ? ~TRIG_DES_OUT[7:6] : TRIG_DES_OUT[7:6];
+    
 oddr_reg oddr_reg(
     .CLK(CLK160), 
-    .DATA(TRIG_DES_OUT[7:6]),
+    .DATA(TO_ODDR),
     .OUT(TLU_TRIGGER)
     );
 

@@ -134,7 +134,7 @@ tlu_controller #(
     .BUS_RD(BUS_RD),
     .BUS_WR(BUS_WR),
     
-    .TRIGGER_CLK(BUS_CLK),
+    .TRIGGER_CLK(dut.CLK40),
     
     .FIFO_READ(TLU_FIFO_READ),
     .FIFO_EMPTY(TLU_FIFO_EMPTY),

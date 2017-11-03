@@ -37,8 +37,8 @@ module tlu_ch_rx
 wire [CLKDV*4-1:0] TDC, TDC_DES;
 reg  [CLKDV*4-1:0] TDC_DES_PREV;
 
-wire [1:0] TDC_FAST;
-ddr_des #(.CLKDV(CLKDV)) iddr_des_tdc(.CLK2X(CLK320), .CLK(CLK160), .WCLK(CLK40), .IN(TLU_IN), .OUT(TDC), .OUT_FAST(TDC_FAST));
+
+ddr_des #(.CLKDV(CLKDV)) iddr_des_tdc(.CLK2X(CLK320), .CLK(CLK160), .WCLK(CLK40), .IN(TLU_IN), .OUT(TDC), .OUT_FAST());
 
 assign TDC_DES = EN_INVERT ? ~TDC : TDC;
 
