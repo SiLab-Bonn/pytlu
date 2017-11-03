@@ -13,16 +13,13 @@ install:
   - sudo apt-get -y install iverilog-daily  
   - sudo apt-get install -qq libhdf5-serial-dev
   
-  #conda
+  # Install conda
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH=$HOME/miniconda/bin:$PATH
   - conda update --yes conda
   - conda install --yes numpy bitarray pytest pyyaml 
-  
-  #cocotb
-  - git clone https://github.com/potentialventures/cocotb.git
-  - export COCOTB=$(pwd)/cocotb
+  - pip install cocotb
   
   # Install basil  
   - git clone -b development https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
