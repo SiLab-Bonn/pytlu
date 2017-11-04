@@ -152,17 +152,18 @@ def main():
     
     chip['tlu_master'].EN_INPUT = in_en
     
+    out_en = 0
+    for oe in args.output_enable:
+        out_en = out_en | (0x01 << int(oe[-1]))
+        
+    chip['tlu_master'].EN_OUTPUT = out_en
+    
     in_inv = 0
     for ie in args.input_invert:
         in_inv = in_inv | (0x01 << int(ie[-1]))
     
     chip['tlu_master'].INVERT_INPUT = in_inv
     
-    out_en = 0
-    for oe in args.output_enable:
-        out_en = out_en | (0x01 << int(oe[-1]))
-        
-    chip['tlu_master'].EN_OUTPUT = out_en
     
     def print_log(): 
             logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skiped: %2d Timeout: %2d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER))
@@ -190,6 +191,8 @@ def main():
             time.sleep(1)
         except KeyboardInterrupt:
             print_log()
+            chip['tlu_master'].EN_INPUT  = 0
+            chip['tlu_master'].EN_OUTPUT = 0
             return
             
 if __name__ == '__main__':

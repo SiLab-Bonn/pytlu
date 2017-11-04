@@ -46,12 +46,12 @@ always@(posedge SYS_CLK)
     else
         state <= state_next;
 
-reg BUSY_FF;
+reg [1:0] BUSY_FF;
 always@(posedge SYS_CLK)
-    BUSY_FF <= INV_OUT ? ~TLU_BUSY : TLU_BUSY;
+    BUSY_FF <= {BUSY_FF[0], INV_OUT ? ~TLU_BUSY : TLU_BUSY};
 
 wire BUSY_REAL;
-assign BUSY_REAL = BUSY_FF & TLU_BUSY; //xnor
+assign BUSY_REAL = &BUSY_FF; //This should not be needed but ...
 
 always@(*) begin
     state_next = state;
@@ -73,14 +73,20 @@ always@(*) begin
 end
 
 wire TLU_CLOCK_REAL;
-assign TLU_CLOCK_REAL = INV_OUT ? ~TLU_CLOCK : TLU_CLOCK;
+
+reg [4:0] TLU_CLOCK_FF;
+always@(posedge CLK160)
+    TLU_CLOCK_FF <= {TLU_CLOCK_FF[3:0], INV_OUT ? ~TLU_CLOCK : TLU_CLOCK};
+
+assign TLU_CLOCK_REAL = TLU_CLOCK_FF[4:3] == 2'b00 && TLU_CLOCK_FF[2:1] == 2'b11; //This is bad but seem to help for some cross-talk
 
 reg [15:0] TRIG_ID_SR;
 initial TRIG_ID_SR = 0;
-always@(posedge TLU_CLOCK_REAL or posedge TRIG_FF)
+//always@(posedge TLU_CLOCK_REAL or posedge TRIG_FF)
+always@(posedge CLK160)
     if(TRIG_FF)
         TRIG_ID_SR <= {TRIG_ID, 1'b0};
-    else
+    else if (TLU_CLOCK_REAL)
         TRIG_ID_SR <= {1'b0, TRIG_ID_SR[15:1]};
 
 reg [31:0] WAIT_CNT;
@@ -99,7 +105,11 @@ always@(*) //posedge SYS_CLK)
 
 assign TLU_RESET = INV_OUT ? 1'b0 : 1'b0;
 
-assign READY = (state == WAIT_STATE  && TLU_CLOCK_REAL == 0  && WAIT_CNT==0) || !ENABLE;
+reg TLU_CLOCK_VETO;
+always@(posedge SYS_CLK)
+    TLU_CLOCK_VETO <= TLU_CLOCK_REAL;
+    
+assign READY = (state == WAIT_STATE  && TLU_CLOCK_VETO == 0  && WAIT_CNT==0) || !ENABLE;
 
 reg [15:0] TIME_OUT_CNT;
 always@(posedge SYS_CLK) begin
