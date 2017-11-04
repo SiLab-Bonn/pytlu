@@ -58,6 +58,7 @@ assign CONF_DIG_TH_INPUT = status_regs[5][4:0];
 wire [5:0] CONF_EN_OUTPUT;
 assign CONF_EN_OUTPUT = status_regs[6][5:0];
 reg [7:0] SKIP_TRIG_COUNTER;
+reg [7:0] TIMEOUT_COUNTER;
 
 wire [15:0] CONF_TIME_OUT;
 assign CONF_TIME_OUT = {status_regs[8], status_regs[7]};
@@ -132,7 +133,8 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= TRIG_ID_BUF[31:24];
         else if(BUS_ADD == 28)
             BUS_DATA_OUT <= SKIP_TRIG_COUNTER;
-        
+        else if(BUS_ADD == 29)
+            BUS_DATA_OUT <= TIMEOUT_COUNTER;
         else
             BUS_DATA_OUT <= 0;
     end
@@ -252,6 +254,7 @@ always@(posedge CLK40)
     TRIG_ID_FF <= TRIG_ID;
         
 localparam INV_OUT = 6'b101010;
+wire [5:0] TIME_OUT;
 genvar dut_ch;
 generate
 for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
@@ -271,6 +274,7 @@ for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
             .TRIG_ID(TRIG_ID_FF[14:0]),
             .READY(READY[dut_ch]),
             .CONF_TIME_OUT(CONF_TIME_OUT),
+            .TIME_OUT(TIME_OUT[dut_ch]),
             
             .TLU_CLOCK(DUT_CLOCK[dut_ch]), .TLU_BUSY(DUT_BUSY[dut_ch]),
             .TLU_TRIGGER(DUT_TRIGGER[dut_ch]), .TLU_RESET(DUT_RESET[dut_ch])
@@ -278,6 +282,12 @@ for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
 end
 endgenerate 
 
+always@(posedge CLK40)
+    if(RST_SYNC | START_SYNC)
+        TIMEOUT_COUNTER <= 0;
+    else if( (|TIME_OUT) & TIMEOUT_COUNTER!=8'hff )
+        TIMEOUT_COUNTER <= TIMEOUT_COUNTER + 1;
+    
 //assign DUT_RESET = {2'b0,SKIP_TRIGGER ,&READY, DUT_BUSY[0], GEN_TRIG_PULSE} ;
 
 endmodule

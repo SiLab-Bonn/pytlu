@@ -113,7 +113,7 @@ def main():
     parser.add_argument('-ds', '--distance', type=th_type, default=31, help="Maximum distance betwean inputs rise time (in units of 1.5625ns). default=31",metavar='0...31')
     parser.add_argument('-t', '--test', type=int, help="Generate triggers with given distance.", metavar='1...n')
     parser.add_argument('-c', '--count', type=int, default=0, help="How many triggers. 0=infinite (default) ", metavar='0...n')
-    parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout. default=65535", metavar='0...65535')
+    parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout. default=65535 0=disabled", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input. Allowed values are '+', '.join(input_ch), metavar='CHx')
     
@@ -165,7 +165,7 @@ def main():
     chip['tlu_master'].EN_OUTPUT = out_en
     
     def print_log(): 
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skiped: %2d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT))
+            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skiped: %2d Timeout: %2d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER))
         
     if args.test:
         logging.info("Starting test...")

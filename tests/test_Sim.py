@@ -218,7 +218,7 @@ class TestSim(unittest.TestCase):
             self.assertEqual((ret_tdc/2).tolist(), (exp_tdc/2).tolist())
         
         self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
-        
+        self.assertEqual(self.dut['tlu_master'].TIMEOUT_COUNTER, 0)
         return ret
 
     def test_timeout(self):
@@ -244,6 +244,7 @@ class TestSim(unittest.TestCase):
         ret = self.dut['FIFO_TB'].get_data()
         self.assertEqual(ret.size, how_many)
         self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
+        self.assertEqual(self.dut['tlu_master'].TIMEOUT_COUNTER, 255 if how_many >  255 else how_many)
        
     def _test_multi_input_distance(self):
         pass

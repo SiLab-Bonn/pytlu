@@ -28,14 +28,14 @@ module tlu_tx
     output wire READY,
     input wire [3:0] TRIG_LE,
     input wire [15:0] CONF_TIME_OUT,
+    output wire TIME_OUT,
     
     input wire TLU_CLOCK, TLU_BUSY,
     output wire TLU_TRIGGER, TLU_RESET
 );
 
 
-//TODO: Timeout
-wire TIME_OUT;
+wire TIMEOUT_INT;
 reg TRIG_FF;
 localparam WAIT_STATE = 3'b001, TRIG_STATE =3'b010, READ_ID_STATE = 3'b100;
 
@@ -50,6 +50,9 @@ reg BUSY_FF;
 always@(posedge SYS_CLK)
     BUSY_FF <= INV_OUT ? ~TLU_BUSY : TLU_BUSY;
 
+wire BUSY_REAL;
+assign BUSY_REAL = BUSY_FF & TLU_BUSY; //xnor
+
 always@(*) begin
     state_next = state;
     
@@ -58,12 +61,12 @@ always@(*) begin
             if(TRIG)
                 state_next = TRIG_STATE;
         TRIG_STATE:
-            if(TIME_OUT)
+            if(TIMEOUT_INT)
                 state_next = WAIT_STATE;
-            else if(BUSY_FF)
+            else if(BUSY_REAL)
                 state_next = READ_ID_STATE;
         READ_ID_STATE:
-            if(!BUSY_FF)
+            if(!BUSY_REAL)
                 state_next = WAIT_STATE;
         default : state_next = WAIT_STATE;
     endcase
@@ -108,7 +111,13 @@ always@(posedge SYS_CLK) begin
         TIME_OUT_CNT <= TIME_OUT_CNT -1;
 end
 
-assign TIME_OUT = (TIME_OUT_CNT == 0);
+
+assign TIMEOUT_INT = (TIME_OUT_CNT == 0) && (CONF_TIME_OUT != 0);
+reg TIME_OUT_FF;
+always@(posedge SYS_CLK)
+    TIME_OUT_FF <= TIMEOUT_INT;
+
+assign TIME_OUT = !TIME_OUT_FF && TIMEOUT_INT && ENABLE;
 
 reg [7:0] TRIG_DES;
 wire [3:0] TRIG_LE_CALC;
