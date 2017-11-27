@@ -22,7 +22,7 @@ module tlu_master_core
 
     input wire FIFO_READ,
     output wire FIFO_EMPTY,
-    output wire [31:0] FIFO_DATA,
+    output wire [15:0] FIFO_DATA,
 
     input wire BUS_CLK,
     input wire [ABUSWIDTH-1:0] BUS_ADD,
@@ -77,7 +77,7 @@ always @(posedge BUS_CLK) begin
         status_regs[2] <= 8'b0;
         status_regs[3] <= 8'b0;
         status_regs[4] <= 8'b0;
-		status_regs[5] <= 8'b0;
+        status_regs[5] <= 8'b0;
         status_regs[6] <= 8'b0;
         status_regs[7] <= 8'hff; //TIMEOUT
         status_regs[8] <= 8'hff;
@@ -135,6 +135,8 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= SKIP_TRIG_COUNTER;
         else if(BUS_ADD == 29)
             BUS_DATA_OUT <= TIMEOUT_COUNTER;
+        else if(BUS_ADD == 30)
+            BUS_DATA_OUT <= LOST_DATA_CNT;
         else
             BUS_DATA_OUT <= 0;
     end
@@ -166,7 +168,7 @@ wire [3:0] VALID;
     
 always@(posedge CLK40)
     if(RST_SYNC || START_SYNC)
-        TIME_STAMP <= 0;
+        TIME_STAMP <= 1;
     else if(TIME_STAMP != 64'hffffffff_ffffffff)
         TIME_STAMP <= TIME_STAMP + 1;
 
@@ -246,7 +248,7 @@ always@(posedge CLK40)
 always@(posedge CLK40)
     if(RST_SYNC | START_SYNC)
         TRIG_ID <= 0; //32'h3fff-10;
-    else if(GEN_TRIG_PULSE && TRIG_ID!=32'hffffffff )
+    else if(GEN_TRIG_PULSE)
         TRIG_ID <= TRIG_ID + 1;
 
 reg [31:0] TRIG_ID_FF;
@@ -288,6 +290,73 @@ always@(posedge CLK40)
     else if( (|TIME_OUT) & TIMEOUT_COUNTER!=8'hff )
         TIMEOUT_COUNTER <= TIMEOUT_COUNTER + 1;
     
-//assign DUT_RESET = {2'b0,SKIP_TRIGGER ,&READY, DUT_BUSY[0], GEN_TRIG_PULSE} ;
+wire cdc_wfull;
+wire [127:0] cdc_data;
+wire fifo_full, cdc_fifo_empty;
+wire cdc_fifo_write;
+    
+always@(posedge CLK40) begin
+    if(RST_SYNC)
+        LOST_DATA_CNT <= 0;
+    else if (cdc_wfull && cdc_fifo_write && LOST_DATA_CNT != 8'hff)
+        LOST_DATA_CNT <= LOST_DATA_CNT +1;
+end
+
+///TODO: add some status? Lost count? Skipped triggers? LAST_RISING_REL is 6 bits enough?
+assign cdc_data = {TRIG_ID, TIME_STAMP, LAST_RISING_REL[3], LAST_RISING_REL[2], LAST_RISING_REL[1], LAST_RISING_REL[0]}; 
+assign cdc_fifo_write = GEN_TRIG_PULSE;
+
+wire [127:0] cdc_data_out;
+cdc_syncfifo #(.DSIZE(128), .ASIZE(3)) cdc_syncfifo
+(
+    .rdata(cdc_data_out),
+    .wfull(cdc_wfull),
+    .rempty(cdc_fifo_empty),
+    .wdata(cdc_data),
+    .winc(cdc_fifo_write), .wclk(CLK40), .wrst(RST_SYNC),
+    .rinc(!fifo_full), .rclk(BUS_CLK), .rrst(RST)
+);
+
+wire out_fifo_read;
+wire [127:0] out_fifo_data_out;
+wire out_fifo_empty;
+gerneric_fifo #(.DATA_SIZE(128), .DEPTH(64))  gerneric_fifo
+( 
+    .clk(BUS_CLK), .reset(RST),
+    .write(!cdc_fifo_empty),
+    .read(out_fifo_read),
+    .data_in(cdc_data_out),
+    .full(fifo_full),
+    .empty(out_fifo_empty),
+    .data_out(out_fifo_data_out), .size()
+);
+
+reg [2:0] out_word_cnt;
+assign out_fifo_read = (out_word_cnt==0 & !out_fifo_empty && FIFO_READ);
+
+always@(posedge BUS_CLK)
+    if(RST)
+        out_word_cnt <= 0;
+    else if (FIFO_READ)
+        out_word_cnt <= out_word_cnt + 1;
+    
+reg [127:0] fifo_data_out_buf;
+always@(posedge BUS_CLK)
+    if(out_fifo_read)
+        fifo_data_out_buf <= out_fifo_data_out;
+        
+wire [15:0]  fifo_data_out_word [7:0];
+    
+    
+genvar iw;
+generate
+    assign fifo_data_out_word[0] = out_fifo_data_out[15:0];
+    for (iw = 1; iw < 8; iw = iw + 1) begin: gen_out
+         assign fifo_data_out_word[iw] = fifo_data_out_buf[(iw+1)*16-1:iw*16];
+    end
+endgenerate 
+
+assign FIFO_DATA = fifo_data_out_word[out_word_cnt];
+assign FIFO_EMPTY = out_word_cnt==0 & out_fifo_empty;
 
 endmodule

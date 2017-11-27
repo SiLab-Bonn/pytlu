@@ -15,6 +15,7 @@ import time
 import argparse
 import signal
 signal.signal(signal.SIGINT, signal.default_int_handler)
+import numpy as np
 
 class Tlu(Dut):
     
@@ -93,6 +94,22 @@ class Tlu(Dut):
         val = self['I2C_IP_SEL'].tobytes().tolist()
         self['i2c'].write(self.I2C_ADDR['IPSEL'], [self.PCA9555['OUT'], val[0] & 0xff, val[1] & 0xff])
         
+    def get_fifo_data(self):
+        data_dtype= np.dtype([('le3', 'u1'),('le2', 'u1'),('le1', 'u1'),('le0', 'u1'), ('time_stamp', 'u8'),('trigger_id', 'u4')])
+        stream_fifo_size = self['stream_fifo'].SIZE
+        
+        if stream_fifo_size!=0:
+            how_much_read = (stream_fifo_size/512 +1)*512
+            
+            self['stream_fifo'].SET_COUNT = how_much_read
+            ret = self['intf'].read(0x0001000000000000, how_much_read)
+            retint = np.frombuffer(ret, dtype=data_dtype)
+            retint = retint[retint['time_stamp'] >0]
+            
+            return retint
+        else:
+            return np.array([], dtype=data_dtype)
+
 def main():
     
     input_ch = ['CH0','CH1','CH2', 'CH3']

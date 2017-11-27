@@ -22,11 +22,11 @@
 `include "tdc_s3/tdc_s3_core.v"
 `include "tdc_s3/tdc_s3.v"
 
-`include "utils/cdc_syncfifo.v"
 `include "utils/flag_domain_crossing.v"
-`include "utils/generic_fifo.v"
 `include "utils/3_stage_synchronizer.v"
 `include "rrp_arbiter/rrp_arbiter.v"
+
+//`include "CY7C1472V33.v"
 
 
 module tb (
@@ -36,7 +36,11 @@ module tb (
     inout wire   [31:0]  BUS_DATA,
     input wire           BUS_RD,
     input wire           BUS_WR,
-    output wire          BUS_BYTE_ACCESS
+    output wire          BUS_BYTE_ACCESS,
+    input wire           STREAM_READY,
+    output wire          STREAM_WRITE,
+    output wire [15:0]   STREAM_DATA
+
 );
 
 wire [15:0] ZEST_BUS_ADD;
@@ -46,8 +50,24 @@ wire [7:0] SEQ_OUT;
 wire [5:0] DUT_TRIGGER, DUT_RESET, DUT_BUSY, DUT_CLOCK;
 wire [3:0] BEAM_TRIGGER;
 assign #100 BEAM_TRIGGER = SEQ_OUT[3:0];
-    
+wire [2:0] USB_STREAM_FLAGS_N;
+wire USB_STREAM_FX2RDY;
+
+wire SRAM_CLK;
+wire [22:0] SRAM_ADD;
+wire SRAM_ADV_LD_N;
+wire [1:0] SRAM_BW_N;
+wire [17:0] SRAM_DATA;
+wire SRAM_OE_N;
+wire SRAM_WE_N;
+
 wire I2C_SDA_OUT;
+
+wire USB_STREAM_CLK;
+assign USB_STREAM_CLK = BUS_CLK;
+wire USB_STREAM_SLWR_n;
+assign STREAM_WRITE = !USB_STREAM_SLWR_n;
+    
 tlu dut (
         .BUS_CLK_IN(BUS_CLK),
         .USB_BUS_ADD(ZEST_BUS_ADD),
@@ -62,12 +82,28 @@ tlu dut (
         .I2C_SDA_OUT(I2C_SDA_OUT),
         
         .DUT_TRIGGER(DUT_TRIGGER), .DUT_RESET(DUT_RESET), 
-        .DUT_BUSY(DUT_BUSY), .DUT_CLOCK(DUT_CLOCK)
+        .DUT_BUSY(DUT_BUSY), .DUT_CLOCK(DUT_CLOCK),
         
+        .USB_STREAM_CLK(USB_STREAM_CLK),
+        .USB_STREAM_FLAGS_N(USB_STREAM_FLAGS_N),
+        .USB_STREAM_FX2RDY(USB_STREAM_FX2RDY),
+        .USB_STREAM_SLWR_n(USB_STREAM_SLWR_n),
+        .USB_STREAM_DATA(STREAM_DATA),
+        
+        .SRAM_CLK(SRAM_CLK),
+        .SRAM_ADD(SRAM_ADD),
+        .SRAM_ADV_LD_N(SRAM_ADV_LD_N),
+        .SRAM_BW_N(SRAM_BW_N),
+        .SRAM_DATA(SRAM_DATA),
+        .SRAM_OE_N(SRAM_OE_N),
+        .SRAM_WE_N(SRAM_WE_N)
         
 );   
 assign I2C_SDA_OUT = 1'b0;
     
+assign USB_STREAM_FLAGS_N[1] = STREAM_READY;
+assign USB_STREAM_FX2RDY = 1;
+
 assign BUS_BYTE_ACCESS = BUS_ADD < 32'h8000_0000 ? 1'b1 : 1'b0;
 
 localparam SEQ_GEN_BASEADDR = 32'hc000;
@@ -243,39 +279,34 @@ bram_fifo
     .FIFO_FULL(),
     .FIFO_NEAR_FULL(),
     .FIFO_READ_ERROR()
-);
-/*
+    );
+    
+
+//cy1472 cy1472( .d(SRAM_DATA), .clk(SRAM_CLK), .a(SRAM_ADD[21:0]), .bws(SRAM_BW_N), 
+//            .we_b(SRAM_WE_N), .adv_lb(SRAM_ADV_LD_N), .ce1b(1'b0), .ce2(1'b1), 
+//            .ce3b(1'b0), .oeb(SRAM_OE_N), .cenb(1'b0), .mode(1'b0));
+    
+
 reg [17:0] sram [8388608-1:0];
-
-wire SRAM_CLK,
-wire  [22:0] SRAM_A,
-wire [17:0] SRAM_DATA,
-wire SRAM_ADV_LD_N,
-wire [1:0] SRAM_BW_N,
-wire SRAM_OE_N,
-wire SRAM_WE_N,
-
 reg [1:0] op_q;
-reg [22:0] addr_rd, addr_wr;
-reg [17:0] data;
+reg [22:0] addr1, addr2;
+reg [17:0] data1, data2;
 always@(posedge SRAM_CLK) begin
     op_q <= {op_q[0], SRAM_WE_N};
 
-    if(~SRAM_WE_N)
-        addr_wr <= SRAM_A;
-    else
-        addr_rd <= SRAM_A;
-        
-    if(op_q[0] == 1'b0)
-        sram[addr_wr] <= SRAM_DATA;
-    else
-        data <= sram[addr_rd];
+    addr1 <= SRAM_ADD;
+    addr2 <= addr1;
+
+    data1 <= sram[SRAM_ADD];
+    data2 <= data1;
+    
+    if(op_q[1] == 1'b0)
+        sram[addr2] <= SRAM_DATA;
 end
 
-assign SRAM_DATA = (op_q[1] == 1'b0) ? 1'bz: data;
-*/
-    
+assign SRAM_DATA = (op_q[1]==0) ? 18'bz: data2;
 
+    
 initial begin
     
     $dumpfile("/tmp/tlu.vcd");

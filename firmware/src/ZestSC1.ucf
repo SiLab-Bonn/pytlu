@@ -106,18 +106,74 @@ net "USB_STREAM_DATA<*>" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
 net "USB_STREAM_FLAGS_N<*>" IOSTANDARD = LVCMOS33;
 
 net "USB_STREAM_CLK" TNM_net = "USB_STREAM_CLK";
-timespec "TS_StreamCLK" = PERIOD "USB_STREAM_CLK" 20.8 ns HIGH 50 %;
+timespec "TS_StreamCLK" = PERIOD "USB_STREAM_CLK" 20.83 ns HIGH 50 %;
 
 net "USB_STREAM_DATA<*>" OFFSET = in 4.0 ns before USB_STREAM_CLK;
-net "USB_STREAM_DATA<*>" OFFSET = out 16.0 ns after USB_STREAM_CLK;
+net "USB_STREAM_DATA<*>" OFFSET = out 16 ns after USB_STREAM_CLK;
 
 net "USB_STREAM_SLRD_n" OFFSET = OUT 8 ns AFTER USB_STREAM_CLK;
-net "USB_STREAM_SLWR_n" OFFSET = OUT 8 ns AFTER USB_STREAM_CLK;
+net "USB_STREAM_SLWR_n" OFFSET = OUT 16 ns AFTER USB_STREAM_CLK;
 net "USB_STREAM_SLOE_n" OFFSET = OUT 8 ns AFTER USB_STREAM_CLK;
 
-#net "USB_STREAM_FLAGS_N<2>" OFFSET = IN 7 ns BEFORE USB_STREAM_CLK;
+net "USB_STREAM_FLAGS_N<2>" OFFSET = IN 7 ns BEFORE USB_STREAM_CLK;
 net "USB_STREAM_FLAGS_N<1>" OFFSET = IN 7 ns BEFORE USB_STREAM_CLK;
 net "USB_STREAM_FLAGS_N<0>" OFFSET = IN 7 ns BEFORE USB_STREAM_CLK;
+
+##################
+# SRAM Interface #
+##################
+
+net "SRAM_CLK" LOC = "B7";
+net "SRAM_ADD<0>" LOC = "D3";
+net "SRAM_ADD<1>" LOC = "E3";
+net "SRAM_ADD<2>" LOC = "D2";
+net "SRAM_ADD<3>" LOC = "D1";
+net "SRAM_ADD<4>" LOC = "C3";
+net "SRAM_ADD<5>" LOC = "C2";
+net "SRAM_ADD<6>" LOC = "B1";
+net "SRAM_ADD<7>" LOC = "C1";
+net "SRAM_ADD<8>" LOC = "G2";
+net "SRAM_ADD<9>" LOC = "A5";
+net "SRAM_ADD<10>" LOC = "A7";
+net "SRAM_ADD<11>" LOC = "A3";
+net "SRAM_ADD<12>" LOC = "D5";
+net "SRAM_ADD<13>" LOC = "B4";
+net "SRAM_ADD<14>" LOC = "A4";
+net "SRAM_ADD<15>" LOC = "C5";
+net "SRAM_ADD<16>" LOC = "B5";
+net "SRAM_ADD<17>" LOC = "E6";
+net "SRAM_ADD<18>" LOC = "D6";
+net "SRAM_ADD<19>" LOC = "C6";
+net "SRAM_ADD<20>" LOC = "B6";
+net "SRAM_ADD<21>" LOC = "E7";
+net "SRAM_ADD<22>" LOC = "D7";
+net "SRAM_ADV_LD_N" LOC = "C7";
+net "SRAM_BW_N<0>" LOC = "C8";
+net "SRAM_BW_N<1>" LOC = "D8";
+
+net "SRAM_DATA<0>" LOC = "B10";
+net "SRAM_DATA<1>" LOC = "A10";
+net "SRAM_DATA<2>" LOC = "E10";
+net "SRAM_DATA<3>" LOC = "D10";
+net "SRAM_DATA<4>" LOC = "C11";
+net "SRAM_DATA<5>" LOC = "B11";
+net "SRAM_DATA<6>" LOC = "E11";
+net "SRAM_DATA<7>" LOC = "D11";
+net "SRAM_DATA<8>" LOC = "C12";
+net "SRAM_DATA<9>" LOC = "B12";
+net "SRAM_DATA<10>" LOC = "B13";
+net "SRAM_DATA<11>" LOC = "A13";
+net "SRAM_DATA<12>" LOC = "B14";
+net "SRAM_DATA<13>" LOC = "A14";
+net "SRAM_DATA<14>" LOC = "D12";
+net "SRAM_DATA<15>" LOC = "C10";
+net "SRAM_DATA<16>" LOC = "A12";
+net "SRAM_DATA<17>" LOC = "A9";
+
+net "SRAM_OE_N" LOC = "C9";
+net "SRAM_WE_N" LOC = "D9";
+
+net "SRAM_*" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
 
 #######################
 # Expansion connector #
@@ -197,3 +253,4 @@ net "DUT_*" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
 net "BEAM_*" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
 net "I2C_*" IOSTANDARD = LVCMOS33 | DRIVE = 12 | SLEW = FAST;
 
+#INST "tlu_master/tlu_master_core/tlu_ch[0].tlu_ch_rx/iddr_des_tdc/Mshreg_DDRQ_DLY_0" LOC = SLICE_X79Y11;

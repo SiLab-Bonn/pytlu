@@ -8,7 +8,7 @@
 `default_nettype none
 
 
-module tlu_master #(
+module stream_fifo #(
     parameter BASEADDR = 16'h0000,
     parameter HIGHADDR = 16'h0000,
     parameter ABUSWIDTH = 16
@@ -20,18 +20,24 @@ module tlu_master #(
     input wire BUS_WR,
     input wire BUS_RD,
 
-    input wire CLK320,
-    input wire CLK160,
-    input wire CLK40,
-
-    input wire TEST_PULSE,
-    output wire [5:0] DUT_TRIGGER, DUT_RESET, 
-    input  wire [5:0] DUT_BUSY, DUT_CLOCK,
-    input  wire [3:0] BEAM_TRIGGER,
+    output wire SRAM_CLK,
+    output wire  [22:0] SRAM_ADD,
+    inout  wire [17:0] SRAM_DATA,
+    output wire SRAM_ADV_LD_N,
+    output wire [1:0] SRAM_BW_N,
+    output wire SRAM_OE_N,
+    output wire SRAM_WE_N,
     
-    input wire FIFO_READ,
-    output wire FIFO_EMPTY,
-    output wire [15:0] FIFO_DATA
+    output wire FIFO_READ_NEXT_OUT,
+    input wire FIFO_EMPTY_IN,
+    input wire [15:0] FIFO_DATA,
+
+    input wire STREAM_CLK,
+    input wire STREAM_READY,
+    output wire STREAM_WRITE_N,
+    output wire [15:0] STREAM_DATA
+    
+
 );
 
 wire IP_RD, IP_WR;
@@ -54,10 +60,12 @@ bus_to_ip #(
     .IP_ADD(IP_ADD),
     .IP_DATA_IN(IP_DATA_IN),
     .IP_DATA_OUT(IP_DATA_OUT)
-);
-tlu_master_core #(
+    );
+    
+    
+stream_fifo_core #(
     .ABUSWIDTH(ABUSWIDTH)
-) tlu_master_core (
+) stream_fifo_core (
     .BUS_CLK(BUS_CLK),
     .BUS_RST(BUS_RST),
     .BUS_ADD(IP_ADD),
@@ -66,18 +74,22 @@ tlu_master_core #(
     .BUS_WR(IP_WR),
     .BUS_DATA_OUT(IP_DATA_OUT),
 
-    .CLK320(CLK320),
-    .CLK160(CLK160),
-    .CLK40(CLK40),
+    .SRAM_CLK(SRAM_CLK),
+    .SRAM_ADD(SRAM_ADD),
+    .SRAM_DATA(SRAM_DATA),
+    .SRAM_ADV_LD_N(SRAM_ADV_LD_N),
+    .SRAM_BW_N(SRAM_BW_N),
+    .SRAM_OE_N(SRAM_OE_N),
+    .SRAM_WE_N(SRAM_WE_N),
     
-    .TEST_PULSE(TEST_PULSE),
-    .DUT_TRIGGER(DUT_TRIGGER), .DUT_RESET(DUT_RESET), 
-    .DUT_BUSY(DUT_BUSY), .DUT_CLOCK(DUT_CLOCK),
-    .BEAM_TRIGGER(BEAM_TRIGGER),
+    .FIFO_READ_NEXT_OUT(FIFO_READ_NEXT_OUT),
+    .FIFO_EMPTY_IN(FIFO_EMPTY_IN),
+    .FIFO_DATA(FIFO_DATA),
     
-    .FIFO_READ(FIFO_READ),
-    .FIFO_EMPTY(FIFO_EMPTY),
-    .FIFO_DATA(FIFO_DATA)
+    .USB_STREAM_CLK(STREAM_CLK),
+    .STREAM_READY(STREAM_READY),
+    .STREAM_WRITE_N(STREAM_WRITE_N),
+    .STREAM_DATA(STREAM_DATA)
     
 );
 

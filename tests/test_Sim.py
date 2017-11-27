@@ -22,8 +22,9 @@ class TestSim(unittest.TestCase):
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) #../
         print root_dir
         cocotb_compile_and_run(
+            sim_bus ="StreamDriver",
             sim_files = [root_dir + '/tests/tb.v'],
-            include_dirs = (root_dir, root_dir + "/firmware/src")
+            include_dirs = (root_dir, root_dir + "/firmware/src", root_dir + "/tests")
         )
        
         with open(root_dir + '/sitlu/tlu.yaml', 'r') as f:
@@ -182,13 +183,13 @@ class TestSim(unittest.TestCase):
             exp_tlu = np.arange(0x80000000 + start, 0x80000000 + start + exp[i], dtype=np.uint32)
             self.assertEqual(np.array_equal(ret[tlu_word], exp_tlu), True)
             
-            exp_tdc = np.array([135]*exp[i], dtype=np.uint32)
+            exp_tdc = np.array([134]*exp[i], dtype=np.uint32)
             #tdc referencee to previus
             if i != 0:
                 exp_tdc[0] = 0xff
             ret_tdc = ret[~tlu_word] >> 20
-            
-            self.assertEqual(ret_tdc.tolist(), exp_tdc.tolist())
+                        
+            self.assertFalse(np.any(np.abs(ret_tdc - exp_tdc) > 1))
             
             self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, start + exp[i])
             
@@ -232,21 +233,30 @@ class TestSim(unittest.TestCase):
         self.dut['TDC_TB'].ENABLE = 1
         
         how_many = 300
-        self.dut['test_pulser'].DELAY = 20
+        distance = 20
+        self.dut['test_pulser'].DELAY = distance - 1
         self.dut['test_pulser'].WIDTH = 1
         self.dut['test_pulser'].REPEAT = how_many
         self.dut['test_pulser'].START
 
         while(not self.dut['test_pulser'].is_ready):
-            #print self.dut['tlu_master'].TRIGGER_ID
             pass
-        
+
         ret = self.dut['FIFO_TB'].get_data()
         self.assertEqual(ret.size, how_many)
+        
+        ret_fifo =  self.dut.get_fifo_data()
+        self.assertEqual(ret.size, how_many)
+        self.assertEqual(range(how_many), ret_fifo['trigger_id'].tolist())
+        self.assertEqual(range(ret_fifo['time_stamp'][0],int(ret_fifo['time_stamp'][0])+how_many*distance, distance), ret_fifo['time_stamp'].tolist())
+        
         self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
         self.assertEqual(self.dut['tlu_master'].TIMEOUT_COUNTER, 255 if how_many >  255 else how_many)
        
     def _test_multi_input_distance(self):
+        pass
+    
+    def _test_fifo_readout(self):
         pass
     
     def tearDown(self):

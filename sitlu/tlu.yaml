@@ -31,6 +31,12 @@ hw_drivers:
     interface : intf
     base_addr : 0x6000
     
+  - name      : stream_fifo
+    type      : sitlu.stream_fifo
+    interface : intf
+    base_addr : 0x7000
+    
+    
 registers:
   - name        : I2C_MUX
     type        : StdRegister

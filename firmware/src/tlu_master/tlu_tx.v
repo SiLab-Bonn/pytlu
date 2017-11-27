@@ -109,7 +109,7 @@ reg TLU_CLOCK_VETO;
 always@(posedge SYS_CLK)
     TLU_CLOCK_VETO <= TLU_CLOCK_REAL;
     
-assign READY = (state == WAIT_STATE  && TLU_CLOCK_VETO == 0  && WAIT_CNT==0) || !ENABLE;
+assign READY = (state == WAIT_STATE  && TLU_CLOCK_VETO == 0  && WAIT_CNT==0) | !ENABLE;
 
 reg [15:0] TIME_OUT_CNT;
 always@(posedge SYS_CLK) begin

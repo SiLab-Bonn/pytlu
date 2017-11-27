@@ -9,6 +9,8 @@
 `include "utils/clock_divider.v"
 `include "utils/cdc_reset_sync.v"
 `include "utils/ddr_des.v"
+`include "utils/cdc_syncfifo.v"
+`include "utils/generic_fifo.v"
 
 `include "gpio/gpio.v"
 
@@ -25,6 +27,10 @@
 
 `include "pulse_gen/pulse_gen.v"
 `include "pulse_gen/pulse_gen_core.v"
+
+`include "stream_fifo/stream_fifo.v"
+`include "stream_fifo/stream_fifo_core.v"
+`include "stream_fifo/zbt_sram_ctr.v"
 
 `ifdef COCOTB_SIM //for simulation
     `include "utils/BUFG_sim.v" 
@@ -52,8 +58,10 @@ module tlu (
         input wire [2:0] USB_STREAM_FLAGS_N,
         output wire USB_STREAM_SLOE_n,
         output wire USB_STREAM_SLRD_n,
-        output reg USB_STREAM_SLWR_n,
-        inout wire [15:0] USB_STREAM_DATA,
+         (* IOB="TRUE" *)
+        output wire USB_STREAM_SLWR_n,
+         (* IOB="TRUE" *)
+        output wire [15:0] USB_STREAM_DATA,
         input wire USB_STREAM_FX2RDY,
 
         //IO
@@ -63,7 +71,17 @@ module tlu (
         
         output wire [5:0] DUT_TRIGGER, DUT_RESET, 
         input  wire [5:0] DUT_BUSY, DUT_CLOCK,
-        input  wire [3:0] BEAM_TRIGGER
+        input  wire [3:0] BEAM_TRIGGER,
+        
+        output wire SRAM_CLK,
+        output wire [22:0] SRAM_ADD,
+        output wire SRAM_ADV_LD_N,
+        output wire [1:0] SRAM_BW_N,
+        inout wire [17:0] SRAM_DATA,
+        output wire SRAM_OE_N,
+        output wire SRAM_WE_N,
+		  
+		  output wire [3:0] DEBUG
         
 );
 
@@ -122,6 +140,9 @@ localparam TLU_MASTER_HIGHADDR = 16'h6000 - 1;
     
 localparam PULSE_TEST_BASEADDR = 16'h6000;
 localparam PULSE_TEST_HIGHADDR = 16'h7000 - 1;
+    
+localparam FIFO_BASEADDR = 16'h7000;
+localparam FIFO_HIGHADDR = 16'h8000 - 1;
     
 
 // ------- MODULES  ------- //
@@ -213,10 +234,10 @@ pulse_gen
     .PULSE_CLK(CLK40),
     .EXT_START(1'b0),
     .PULSE(TEST_PULSE)
-    );
+);
     
 wire TDC_MASTER_FIFO_READ, TDC_MASTER_FIFO_EMPTY;
-wire [31:0] TDC_MASTER_FIFO_DATA;
+wire [15:0] TDC_MASTER_FIFO_DATA;
 
 tlu_master #(
     .BASEADDR(TLU_MASTER_BASEADDR),
@@ -243,100 +264,68 @@ tlu_master #(
     .BUS_WR(BUS_WR)
 );
 
+wire STREAM_WRITE_N;
+wire STREAM_READY;
+stream_fifo
+#( 
+    .BASEADDR(FIFO_BASEADDR), 
+    .HIGHADDR(FIFO_HIGHADDR)
+) stream_fifo (
+
+    .BUS_CLK(BUS_CLK),
+    .BUS_RST(BUS_RST),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA),
+    .BUS_RD(BUS_RD),
+    .BUS_WR(BUS_WR),
+
+    .FIFO_READ_NEXT_OUT(TDC_MASTER_FIFO_READ),
+    .FIFO_EMPTY_IN(TDC_MASTER_FIFO_EMPTY),
+    .FIFO_DATA(TDC_MASTER_FIFO_DATA),
+
+    .SRAM_CLK(SRAM_CLK),
+    .SRAM_ADD(SRAM_ADD),
+    .SRAM_DATA(SRAM_DATA),
+    .SRAM_ADV_LD_N(SRAM_ADV_LD_N),
+    .SRAM_BW_N(SRAM_BW_N),
+    .SRAM_OE_N(SRAM_OE_N),
+    .SRAM_WE_N(SRAM_WE_N),
+    
+    .STREAM_CLK(USB_STREAM_CLK),
+    .STREAM_READY(STREAM_READY),
+    .STREAM_WRITE_N(STREAM_WRITE_N),
+    .STREAM_DATA(USB_STREAM_DATA)
+    
+    );
 
 
-///
-///
-///
-
-wire STREAM_CLK;
-BUFG CLK_STREAM_BUFG_INST (.I(USB_STREAM_CLK), .O(STREAM_CLK));
-
-wire STREAM_RST;
-reset_gen reset_gen_stream(.CLK(STREAM_CLK), .RST(STREAM_RST));
-
-/////
-/////
-
-parameter stream_in_idle   = 1'b0;
-parameter stream_in_write  = 1'b1;
-
-reg current_stream_in_state;
-reg next_stream_in_state;
-reg [15:0] data_cnt;
-reg [4:0] cnt;
-
-assign USB_STREAM_PKTEND_N = ~(cnt == 5'hff);// 1'b1;
-assign USB_STREAM_DATA[15:0] = data_cnt[15:0];
+assign USB_STREAM_PKTEND_N = 1'b1;
 assign USB_STREAM_FIFOADDR = 2'b10;
 assign USB_STREAM_SLRD_n = 1'b1;
 assign USB_STREAM_SLOE_n = 1'b1;
+assign USB_STREAM_SLWR_n = STREAM_WRITE_N;
+assign STREAM_READY = (USB_STREAM_FLAGS_N[1] == 1'b1) & (USB_STREAM_FX2RDY == 1'b1);
 
-//write control signal generation
-always@(*)begin
-    if((current_stream_in_state == stream_in_write) & (USB_STREAM_FLAGS_N[1] == 1'b1))
-        USB_STREAM_SLWR_n <= 1'b0;
-    else
-        USB_STREAM_SLWR_n <= 1'b1;
-end
-
-//loopback mode state machine 
-always@(posedge STREAM_CLK) begin
-    if(STREAM_RST)
-          current_stream_in_state <= stream_in_idle;
-    else
-        current_stream_in_state <= next_stream_in_state;
-end
-
-//LoopBack mode state machine combo
-always@(*) begin
-    next_stream_in_state = current_stream_in_state;
-    case(current_stream_in_state)
-        stream_in_idle:begin
-            if((USB_STREAM_FLAGS_N[1] == 1'b1) & (USB_STREAM_FX2RDY == 1'b1))
-                next_stream_in_state = stream_in_write;
-            else
-                next_stream_in_state = stream_in_idle;
-        end
-        stream_in_write:begin
-            if(USB_STREAM_FLAGS_N[1] == 1'b0)
-                next_stream_in_state = stream_in_idle;
-            else
-                next_stream_in_state = stream_in_write;
-        end
-        default: 
-            next_stream_in_state = stream_in_idle;
-    endcase
-end
-
-
-//data generator counter
-always@(posedge STREAM_CLK) begin
-    if(STREAM_RST)
-        data_cnt <= 16'd0;
-    else if(USB_STREAM_SLWR_n == 1'b0)
-        data_cnt <= data_cnt + 16'd1;
-end        
-
-always@(posedge STREAM_CLK) begin
-    if(STREAM_RST)
-        cnt <= 0;
-    else if(USB_STREAM_SLWR_n == 1'b0)
-        cnt <= cnt + 1;
-end        
-
- 
-wire CLK_1HZ;
-clock_divider #(
-  .DIVISOR(40000000)
-) i_clock_divisor_40MHz_to_1Hz (
-	  .CLK(CLK40),
-	  .RESET(1'b0),
-	  .CE(),
-	  .CLOCK(CLK_1HZ)
+/*
+wire [35:0] control_bus;
+chipscope_icon ichipscope_icon
+(
+    .CONTROL0(control_bus)
 );
+chipscope_ila ichipscope_ila 
+(
+    .CONTROL(control_bus),
+    .CLK(USB_STREAM_CLK), 
+    .TRIG0({USB_STREAM_DATA, USB_STREAM_FLAGS_N,USB_STREAM_FX2RDY, USB_STREAM_SLWR_n, USB_STREAM_CLK, BUS_CLK})
+);
+*/
 
-//assign DUT_TRIGGER = {6{CLK_1HZ}};
-//assign DUT_RESET = DUT_BUSY;
+/*
+assign DEBUG[0] = STREAM_WRITE;
+assign DEBUG[1] = STREAM_READY;
+assign DEBUG[2] = USB_STREAM_CLK;
+assign DEBUG[3] = BUS_CLK;
+*/
+//assign DEBUG = 0;
 
 endmodule
