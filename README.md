@@ -17,6 +17,7 @@ TBD...
 - trigger acceptance based on input rising distance
 - hdf5 data storage (trigger id, timestamp, TDC)
 - testbanch for software and firmware
+- example fpga reciver module : https://github.com/SiLab-Bonn/basil/tree/master/firmware/modules/tlu
 
 ## Instalation
 Use [conda](http://conda.pydata.org) for python. 
