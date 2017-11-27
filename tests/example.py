@@ -26,6 +26,9 @@ if __name__ == '__main__':
     #ret = chip['intf'].read(0x0001000000000000, size)
     #print size, len(ret), ret
     
+    #chip['stream_fifo'].SET_COUNT = size
+    #ret = chip['intf'].read(0x0001000000000000, size)
+            
     #for k in range(2):
     chip['tlu_master'].EN_INPUT = 0
     chip['tlu_master'].MAX_DISTANCE = 31
@@ -34,25 +37,33 @@ if __name__ == '__main__':
     chip['tlu_master'].TIMEOUT = 20
 
     
-    how_many = 1000000*10
-    chip['test_pulser'].DELAY = 200
+    how_many = 10*10**6
+    chip['test_pulser'].DELAY = 200 -5
     chip['test_pulser'].WIDTH = 5
     chip['test_pulser'].REPEAT = how_many
     chip['test_pulser'].START
 
-
-    while(not chip['test_pulser'].is_ready):
+    #time.sleep(0.1)
+    
+    def get_data(tid):
         retint = chip.get_fifo_data()
+        
         if len(retint):
-            print retint['trigger_id'][0], retint['trigger_id'][-1] , float(retint['time_stamp'][-1]) / (40*(10**6)), retint['trigger_id'][-1] - retint['trigger_id'][0]
+            ok = np.array_equal(retint['trigger_id'], np.arange(tid, tid + len(retint)))
+            #print retint['trigger_id']
+            print 'ok:', ok, retint['trigger_id'][0], '-', retint['trigger_id'][-1] , float(retint['time_stamp'][-1]) / (40*(10**6)), retint['trigger_id'][-1] - retint['trigger_id'][0], chip['tlu_master'].LOST_DATA_CNT
+            
         time.sleep(0.1)
         
-    for _ in range(3):
-        retint = chip.get_fifo_data()
-        if len(retint):
-            print retint['trigger_id'][0], retint['trigger_id'][-1] , float(retint['time_stamp'][-1]) / (40*(10**6)), retint['trigger_id'][-1] - retint['trigger_id'][0]
+        return len(retint)
         
-
+    tid = 0
+    while(not chip['test_pulser'].is_ready):
+        tid += get_data(tid)
+        
+    for _ in range(3):
+        tid += get_data(tid)
+        
     print 'TRIGGER_ID', chip['tlu_master'].TRIGGER_ID
     print 'LOST_DATA_CNT', chip['tlu_master'].LOST_DATA_CNT
     print 'TIMEOUT_COUNTER', chip['tlu_master'].TIME_STAMP, chip['tlu_master'].TIME_STAMP/(40*(10**6))

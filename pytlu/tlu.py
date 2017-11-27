@@ -42,6 +42,10 @@ class Tlu(Dut):
         if fw_version != self.VERSION:       
             raise Exception("TLU firmware version does not satisfy version requirements (read: %s, require: %s)" % ( fw_version, self.VERSION))
 
+        #Who know why this is needed but other way first bytes are mising every secount time?
+        self['stream_fifo'].SET_COUNT = 8*512
+        self['intf'].read(0x0001000000000000, 8*512)
+    
         self.write_i2c_config()
         
     def write_i2c_config(self):
@@ -103,6 +107,7 @@ class Tlu(Dut):
             
             self['stream_fifo'].SET_COUNT = how_much_read
             ret = self['intf'].read(0x0001000000000000, how_much_read)
+            #print how_much_read, len(ret)
             retint = np.frombuffer(ret, dtype=data_dtype)
             retint = retint[retint['time_stamp'] >0]
             

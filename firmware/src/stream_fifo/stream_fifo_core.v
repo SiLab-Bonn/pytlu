@@ -164,8 +164,8 @@ cdc_syncfifo #(.DSIZE(24), .ASIZE(3)) cdc_syncfifo_count
     .rinc(1'b1), .rclk(STREAM_CLK), .rrst(STREAM_RST)
 );
 
-reg [22:0] sram_addr_rd;
-reg [22:0] sram_addr_wr;
+reg [18:0] sram_addr_rd;
+reg [18:0] sram_addr_wr;
 
 reg sram_read;
 wire sram_full, sram_write, sram_empty;
@@ -179,12 +179,12 @@ always @(posedge STREAM_CLK)
     else if(sram_read & count!=0)
         count <= count - 1;
         
-reg [23:0] sram_rd_end;
+reg [18:0] sram_rd_end;
 always @(posedge STREAM_CLK)
     if(STREAM_RST)
         sram_rd_end <= 0;
      else if(!cdc_count_empty)
-        sram_rd_end <= {sram_addr_wr[22:3], 3'b000};
+        sram_rd_end <= {sram_addr_wr[18:3], 3'b000};
 
 reg sram_rd_addr_inc;
 always @(posedge STREAM_CLK)
@@ -224,13 +224,13 @@ always@(posedge STREAM_CLK) begin
         sram_addr_rd <= sram_addr_rd + 1;
 end
 
-wire [22:0] sram_addr_wr_next;
+wire [18:0] sram_addr_wr_next;
 assign sram_addr_wr_next = sram_addr_wr + 1;
 
 assign sram_full = sram_addr_wr_next == sram_addr_rd;
 assign sram_empty = (sram_addr_wr == sram_addr_rd);
 
-reg [22:0] sram_size_stream;
+reg [18:0] sram_size_stream;
 always @ (posedge STREAM_CLK)
     sram_size_stream <= sram_addr_wr - sram_addr_rd;
 
