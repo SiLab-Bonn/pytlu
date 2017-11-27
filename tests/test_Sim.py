@@ -13,7 +13,7 @@ import yaml
 import time
 import numpy as np
 
-from sitlu.tlu import Tlu
+from pytlu.tlu import Tlu
 
 class TestSim(unittest.TestCase):
 
@@ -27,7 +27,7 @@ class TestSim(unittest.TestCase):
             include_dirs = (root_dir, root_dir + "/firmware/src", root_dir + "/tests")
         )
        
-        with open(root_dir + '/sitlu/tlu.yaml', 'r') as f:
+        with open(root_dir + '/pytlu/tlu.yaml', 'r') as f:
             cnfg = yaml.load(f)
         cnfg['transfer_layer'][0]['type'] = 'SiSim'
         cnfg['hw_drivers'].append({'name' : 'SEQ_GEN_TB', 'type' : 'seq_gen', 'interface': 'intf', 'base_addr': 0xc000})

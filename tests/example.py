@@ -5,7 +5,7 @@
 # ------------------------------------------------------------
 #
 
-from sitlu.tlu import Tlu
+from pytlu.tlu import Tlu
 #from importlib import import_module
 import numpy as np
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     
     how_many = 1000000*10
-    chip['test_pulser'].DELAY = 100
+    chip['test_pulser'].DELAY = 200
     chip['test_pulser'].WIDTH = 5
     chip['test_pulser'].REPEAT = how_many
     chip['test_pulser'].START

@@ -4,10 +4,10 @@ from setuptools import setup
 from setuptools import find_packages
 from platform import system
 
-version = '0.0.2'
+version = '0.0.3'
 
 setup(
-    name='sitlu',
+    name='pytlu',
     version=version,
     description='DAQ for TLU',
     url='https://github.com/SiLab-Bonn/tlu',
@@ -23,7 +23,7 @@ setup(
     package_data={'': ['README.*', 'VERSION'], 'docs': ['*'], 'sitlu': ['*.yaml', '*.bit']},
     entry_points={
         'console_scripts': [
-            'sitlu = sitlu.tlu:main',
+            'pytlu = pytlu.tlu:main',
         ]
     },
     platforms='any'

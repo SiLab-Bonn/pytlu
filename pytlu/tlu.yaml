@@ -7,7 +7,7 @@
 
 transfer_layer:
   - name  : intf
-    type  : sitlu.ZestSC1TL    init:
+    type  : pytlu.ZestSC1TL    init:
         bit_file : tlu.bit
 hw_drivers:
   - name      : gpio
@@ -22,7 +22,7 @@ hw_drivers:
     base_addr : 0x4000
     
   - name      : tlu_master
-    type      : sitlu.tlu_master
+    type      : pytlu.tlu_master
     interface : intf
     base_addr : 0x5000
     
@@ -32,7 +32,7 @@ hw_drivers:
     base_addr : 0x6000
     
   - name      : stream_fifo
-    type      : sitlu.stream_fifo
+    type      : pytlu.stream_fifo
     interface : intf
     base_addr : 0x7000
     
