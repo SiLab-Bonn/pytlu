@@ -1,6 +1,6 @@
 # pytlu
 
-[![Build Status](https://travis-ci.org/SiLab-Bonn/lfcpix.svg?branch=master)](https://travis-ci.org/SiLab-Bonn/lfcpix)
+[![Build Status](https://travis-ci.org/SiLab-Bonn/pytlu.svg?branch=master)](https://travis-ci.org/SiLab-Bonn/pytlu)
 
 DAQ software and firmware [Trigger Logic Unit (TLU)](https://twiki.cern.ch/twiki/bin/view/MimosaTelescope/TLU).
 
