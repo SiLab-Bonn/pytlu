@@ -16,6 +16,9 @@ import argparse
 import signal
 signal.signal(signal.SIGINT, signal.default_int_handler)
 import numpy as np
+from fifo_readout import FifoReadout
+from contextlib import contextmanager
+import tables as tb
 
 class Tlu(Dut):
     
@@ -25,13 +28,38 @@ class Tlu(Dut):
     PCA9555 = {'DIR': 6, 'OUT': 2}
     IP_SEL = {'RJ45': 0b11, 'LEMO': 0b10}
     
-    def __init__(self,conf=None):
+    def __init__(self,conf=None, log_file=None, data_file=None):
         
         cnfg = conf
         logging.info("Loading configuration file from %s" % conf)
         if conf==None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
-            
+        
+        self.data_dtype= np.dtype([('le3', 'u1'),('le2', 'u1'),('le1', 'u1'),('le0', 'u1'), ('time_stamp', 'u8'),('trigger_id', 'u4')])
+        self.meta_data_dtype= np.dtype([('index_start', 'u4'),('index_stop', 'u4'),('data_length', 'u4'),
+                                        ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'),('error', 'u4')])
+    
+        self.run_name = time.strftime("tlu_%Y%m%d_%H%M%S")
+        self.output_filename = self.run_name
+        self._first_read = False
+        
+        self.log_file = self.output_filename + '.log'
+        if data_file:
+            self.log_file = log_file
+        
+        self.fh = logging.FileHandler(self.log_file )
+        self.fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
+        self.fh.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger()
+        self.logger.addHandler(self.fh)
+        logging.info('Initializing %s', self.__class__.__name__)
+
+        self.data_file = self.output_filename + '.h5'
+        if data_file:
+            self.data_file = data_file
+        
+        logging.info('Data file name: %s', self.data_file)
+        
         super(Tlu, self).__init__(conf)
 
     def init(self):
@@ -41,13 +69,15 @@ class Tlu(Dut):
         logging.info("TLU firmware version: %s" % (fw_version))        
         if fw_version != self.VERSION:       
             raise Exception("TLU firmware version does not satisfy version requirements (read: %s, require: %s)" % ( fw_version, self.VERSION))
-
+        
         #Who know why this is needed but other way first bytes are mising every secount time?
         self['stream_fifo'].SET_COUNT = 8*512
         self['intf'].read(0x0001000000000000, 8*512)
     
         self.write_i2c_config()
         
+        
+            
     def write_i2c_config(self):
         self.write_rj45_leds()
         self.write_lemo_leds()
@@ -99,7 +129,6 @@ class Tlu(Dut):
         self['i2c'].write(self.I2C_ADDR['IPSEL'], [self.PCA9555['OUT'], val[0] & 0xff, val[1] & 0xff])
         
     def get_fifo_data(self):
-        data_dtype= np.dtype([('le3', 'u1'),('le2', 'u1'),('le1', 'u1'),('le0', 'u1'), ('time_stamp', 'u8'),('trigger_id', 'u4')])
         stream_fifo_size = self['stream_fifo'].SIZE
         
         if stream_fifo_size!=0:
@@ -107,14 +136,60 @@ class Tlu(Dut):
             
             self['stream_fifo'].SET_COUNT = how_much_read
             ret = self['intf'].read(0x0001000000000000, how_much_read)
-            #print how_much_read, len(ret)
-            retint = np.frombuffer(ret, dtype=data_dtype)
+            
+            retint = np.frombuffer(ret, dtype=self.data_dtype)
             retint = retint[retint['time_stamp'] >0]
             
             return retint
         else:
-            return np.array([], dtype=data_dtype)
+            return np.array([], dtype=self.data_dtype)
 
+    @contextmanager
+    def readout(self, *args, **kwargs):
+        if not self._first_read:
+            time.sleep(0.1)
+            
+            self.filter_data = tb.Filters(complib='blosc', complevel=5)
+            self.filter_tables = tb.Filters(complib='zlib', complevel=5)
+            self.h5_file = tb.open_file(self.data_file, mode='w', title='TLU')
+            self.data_table = self.h5_file.create_table (self.h5_file.root, name='raw_data', description=self.data_dtype, title='data', filters=self.filter_data)
+            self.meta_data_table = self.h5_file.create_table(self.h5_file.root, name='meta_data', description=self.meta_data_dtype, title='meta_data', filters=self.filter_tables)
+            
+            self.fifo_readout = FifoReadout(self)
+            self.fifo_readout.print_readout_status()
+            self._first_read = True
+            
+        self.fifo_readout.start(callback=self.handle_data, errback=self.handle_err)
+        yield
+        self.fifo_readout.stop()
+        self.fifo_readout.print_readout_status()
+        
+    
+    def handle_data(self, data_tuple):
+        '''Handling of the data.
+        '''
+        
+        total_words = self.raw_data_earray.nrows
+        
+        print data_tuple[0]
+        
+        self.data_table.append(data_tuple[0])
+        self.data_table.flush()
+        
+        len_raw_data = data_tuple[0].shape[0]
+        self.meta_data_table.row['timestamp_start'] = data_tuple[1]
+        self.meta_data_table.row['timestamp_stop'] = data_tuple[2]
+        self.meta_data_table.row['error'] = data_tuple[3]
+        self.meta_data_table.row['data_length'] = len_raw_data
+        self.meta_data_table.row['index_start'] = total_words
+        total_words += len_raw_data
+        self.meta_data_table.row['index_stop'] = total_words
+        self.meta_data_table.row.append()
+        self.meta_data_table.flush()
+        
+    def handle_err(self, exc):
+        pass
+            
 def main():
     
     input_ch = ['CH0','CH1','CH2', 'CH3']
@@ -138,10 +213,12 @@ def main():
     parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout. default=65535 0=disabled", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input. Allowed values are '+', '.join(input_ch), metavar='CHx')
+    parser.add_argument('-l', '--log',  type=str, default=None, help='log file name')
+    parser.add_argument('-d', '--data',  type=str, default=None, help='data file name')
     
     args = parser.parse_args()
     
-    chip = Tlu()
+    chip = Tlu(log_file = args.log, data_file = args.data)
     chip.init()
 
     ch_no = [int(x[-1]) for x in args.output_enable]
@@ -172,7 +249,6 @@ def main():
     for ie in args.input_enable:
         in_en = in_en | (0x01 << int(ie[-1]))
     
-    chip['tlu_master'].EN_INPUT = in_en
     
     out_en = 0
     for oe in args.output_enable:
@@ -192,30 +268,34 @@ def main():
         
     if args.test:
         logging.info("Starting test...")
-        
-        chip['test_pulser'].DELAY = args.test
-        chip['test_pulser'].WIDTH = 1
-        chip['test_pulser'].REPEAT = args.count
-        chip['test_pulser'].START
-        
-        start_time = time.time()
-        while(not chip['test_pulser'].is_ready):
+        with chip.readout():
+            chip['test_pulser'].DELAY = args.test
+            chip['test_pulser'].WIDTH = 1
+            chip['test_pulser'].REPEAT = args.count
+            chip['test_pulser'].START
+            
+            start_time = time.time()
+            
+            while(not chip['test_pulser'].is_ready):
+                print_log()
+                time.sleep(1)
             print_log()
-            time.sleep(1)
-        print_log()
         return
     
     logging.info("Starting ... Ctrl+C to exit")
     start_time = time.time()
-    while True:
-        try:
-            print_log()
-            time.sleep(1)
-        except KeyboardInterrupt:
-            print_log()
-            chip['tlu_master'].EN_INPUT  = 0
-            chip['tlu_master'].EN_OUTPUT = 0
-            return
+    stop = False
+    with chip.readout():
+        chip['tlu_master'].EN_INPUT = in_en
+        while not stop:
+            try:
+                print_log()
+                time.sleep(1)
+            except KeyboardInterrupt:
+                chip['tlu_master'].EN_INPUT  = 0
+                chip['tlu_master'].EN_OUTPUT = 0
+                stop = True
+        print_log()
             
 if __name__ == '__main__':
     main()

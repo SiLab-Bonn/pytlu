@@ -256,9 +256,25 @@ class TestSim(unittest.TestCase):
     def _test_multi_input_distance(self):
         pass
     
-    def _test_fifo_readout(self):
-        pass
+    def test_fifo_readout(self):
+        self.dut['tlu_master'].EN_INPUT = 0
+        self.dut['tlu_master'].MAX_DISTANCE = 31
+        self.dut['tlu_master'].THRESHOLD = 10
+        self.dut['tlu_master'].EN_OUTPUT = 0
+        self.dut['tlu_master'].TIMEOUT = 20
     
+        how_many = 100
+        self.dut['test_pulser'].DELAY = 200 -5
+        self.dut['test_pulser'].WIDTH = 5
+        self.dut['test_pulser'].REPEAT = how_many
+    
+        with self.dut.readout():
+            self.dut['test_pulser'].START
+            while(not self.dut['test_pulser'].is_ready):
+                pass
+
+        self.assertEqual(self.dut.fifo_readout.get_record_count(), how_many)
+        
     def tearDown(self):
         self.dut.close()
         time.sleep(1)

@@ -246,8 +246,8 @@ zbt_sram_ctl zbt_sram_ctl(
     .CLK2X(STREAM_CLK2X),
     .RESET(STREAM_RST),
 
-    .ADDR_WR(sram_addr_wr),
-    .ADDR_RD(sram_addr_rd),
+    .ADDR_WR({4'b0, sram_addr_wr}),
+    .ADDR_RD({4'b0, sram_addr_rd}),
     .DATA_IN(cdc_data_out),
     .WE(sram_write),
     .RD(sram_read),
