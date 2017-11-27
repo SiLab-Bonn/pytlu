@@ -169,7 +169,7 @@ class Tlu(Dut):
         '''Handling of the data.
         '''
         
-        total_words = self.raw_data_earray.nrows
+        total_words = self.data_table.nrows
         
         print data_tuple[0]
         
