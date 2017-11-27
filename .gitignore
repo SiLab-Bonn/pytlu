@@ -61,8 +61,6 @@ target/
 
 /firmware/ise/*
 !/firmware/ise/*.xise
-!/firmware/ise/*.bit
-
 
 *.vcd
 *.vcd.hier
@@ -70,6 +68,7 @@ target/
 tests/sim_build
 tests/results.xml
 tests/Makefile
+tests/*.h5
 .dvt
 .tmp
 
