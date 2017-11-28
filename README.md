@@ -15,7 +15,7 @@ TBD...
 - configurable input inversion
 - configurable input acceptance based on the pulse with
 - trigger acceptance based on input rising distance
-- hdf5 data storage (trigger id, timestamp, TDC)
+- continuous data storage (trigger id, timestamp, TDC)
 - testbanch for software and firmware
 - example fpga reciver module : https://github.com/SiLab-Bonn/basil/tree/master/firmware/modules/tlu
 
