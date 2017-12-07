@@ -303,7 +303,7 @@ always@(posedge CLK40) begin
 end
 
 ///TODO: add some status? Lost count? Skipped triggers? LAST_RISING_REL is 6 bits enough?
-assign cdc_data = {TRIG_ID, TIME_STAMP, LAST_RISING_REL[3], LAST_RISING_REL[2], LAST_RISING_REL[1], LAST_RISING_REL[0]}; 
+assign cdc_data = {TRIG_ID, TIME_STAMP, LAST_RISING_REL[3] + 8'd43, LAST_RISING_REL[2] + 8'd43, LAST_RISING_REL[1] + 8'd43, LAST_RISING_REL[0] + 8'd43}; 
 assign cdc_fifo_write = GEN_TRIG_PULSE;
 
 wire [127:0] cdc_data_out;
