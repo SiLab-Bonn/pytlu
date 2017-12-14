@@ -252,10 +252,71 @@ class TestSim(unittest.TestCase):
         
         self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
         self.assertEqual(self.dut['tlu_master'].TIMEOUT_COUNTER, 255 if how_many >  255 else how_many)
-       
-    def _test_multi_input_distance(self):
-        pass
-    
+
+    def test_multi_input_distance(self):
+        self.dut['TLU_TB'].TRIGGER_COUNTER = 0
+        self.dut['TLU_TB'].TRIGGER_MODE = 2
+        self.dut['TLU_TB'].TRIGGER_SELECT = 1
+        self.dut['TLU_TB'].TRIGGER_VETO_SELECT = 2
+        self.dut['TLU_TB'].TRIGGER_ENABLE = 1
+
+        self.dut['tlu_master'].EN_INPUT = 0b1111
+        self.dut['tlu_master'].EN_OUTPUT = 0b000001
+        self.dut['tlu_master'].THRESHOLD = 0
+
+        max_distances = [0, 15, 31]
+
+        for max_distance in max_distances:
+            self.dut['tlu_master'].MAX_DISTANCE = max_distance
+            if max_distance == 0:
+                # max distance of zero means disabled, thus expect no generated trigger
+                delays = [0]
+                exp = [0]
+            if max_distance == 15:
+                delays = [0, 5, 14, 15, 16, 17]
+                exp = [4, 4, 4, 0, 0, 0]
+            if max_distance == 31:
+                delays = [0, 5, 30, 31, 32, 33]
+                exp = [4, 4, 4, 0, 0, 0]
+            for i, delay in enumerate(delays):
+                self.dut['SEQ_TB'].set_repeat(1)
+                self.dut['SEQ_TB']['T0'][:] = 0
+                self.dut['SEQ_TB']['T1'][:] = 0
+                self.dut['SEQ_TB']['T2'][:] = 0
+                self.dut['SEQ_TB']['T3'][:] = 0
+
+                self.dut['SEQ_TB']['T0'][0 + delay:31 + delay] = 1
+                self.dut['SEQ_TB']['T1'][0:31] = 1
+                self.dut['SEQ_TB']['T2'][0:31] = 1
+                self.dut['SEQ_TB']['T3'][0:31] = 1
+
+                self.dut['SEQ_TB']['T0'][1000:1031] = 1
+                self.dut['SEQ_TB']['T1'][1000 + delay:1031 + delay] = 1
+                self.dut['SEQ_TB']['T2'][1000:1031] = 1
+                self.dut['SEQ_TB']['T3'][1000:1031] = 1
+
+                self.dut['SEQ_TB']['T0'][2000:2031] = 1
+                self.dut['SEQ_TB']['T1'][2000:2031] = 1
+                self.dut['SEQ_TB']['T2'][2000 + delay:2031 + delay] = 1
+                self.dut['SEQ_TB']['T3'][2000:2031] = 1
+
+                self.dut['SEQ_TB']['T0'][3000:3031] = 1
+                self.dut['SEQ_TB']['T1'][3000:3031] = 1
+                self.dut['SEQ_TB']['T2'][3000:3031] = 1
+                self.dut['SEQ_TB']['T3'][3000 + delay:3031 + delay] = 1
+
+                self.dut['SEQ_TB'].set_size(4000)
+                self.dut['SEQ_TB'].write(4000)
+
+                self.dut['SEQ_TB'].START
+
+                while(not self.dut['SEQ_TB'].is_ready):
+                    pass
+
+                ret = self.dut['FIFO_TB'].get_data()
+
+                self.assertEqual(ret.size, exp[i])
+
     def test_fifo_readout(self):
         self.dut['tlu_master'].EN_INPUT = 0
         self.dut['tlu_master'].MAX_DISTANCE = 31
