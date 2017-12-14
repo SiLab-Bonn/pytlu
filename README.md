@@ -27,32 +27,22 @@ The data of all accepted triggers will be stored in a .h5 file. It contains the 
 
 ## Installation
 
-Before installation of pytlu run the following commands:
-```bash
-sudo add-apt-repository -y ppa:team-electronics/ppa
-sudo apt-get update
-sudo apt-get -y install iverilog-daily
-sudo apt-get install -qq libhdf5-serial-dev
-```
-
-Then, install [conda](http://conda.pydata.org).
+Install [conda](http://conda.pydata.org).
 
 After this, run the following commands to install the required packages:
 ```bash
-conda install --yes numpy bitarray pytest pyyaml pytables 
-pip install cocotb
+conda install --yes numpy bitarray pyyaml pytables 
 ```
-Install [Basil](https://github.com/SiLab-Bonn/basil).
+Install [Basil](https://github.com/SiLab-Bonn/basil) via:
+```bash
+pip install basi_daq=2.4.x
+```
 
-Finish the installation of pytlu via:
+Install pytlu via:
 ```bash
-python setup.py develop
+pip install pytlu
 ```
-In order to test the installation run the following commands:
-```bash
-cd tests 
-py.test -s
-```
+See [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
 
 ## Usage
 
@@ -63,5 +53,5 @@ pytlu -h
 
 Example:
 ```bash
-pytlu -t 10000 -c 10000 -oe CH0 --timeout 2
+pytlu -t 10000 -c 10000 -oe CH1 --timeout 2
 ```
