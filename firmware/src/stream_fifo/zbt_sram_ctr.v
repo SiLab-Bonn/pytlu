@@ -75,7 +75,6 @@ ODDR sram_oe(
     .Q(SRAM_OE_N)
     );
 
-
 genvar ch;
 generate
 
@@ -88,12 +87,26 @@ for (ch = 0; ch < 23; ch = ch + 1) begin: addr_ch
 end
 endgenerate
 
-assign SRAM_DATA = CLK ? {2'b00, write_data_q[2]} :18'bz  ;
+reg [17:0] sram_data_out;
+always @(posedge CLK2X) 
+    sram_data_out <= {2'b00, write_data_q[1]};
+
+reg out_en_pre = 0;
+always @(posedge CLK2X)
+    if(out_en_pre)
+        out_en_pre <= 0;
+    else if(we_q[1])
+        out_en_pre <= 1;
+
+reg out_en;        
+always @(posedge CLK2X)
+    out_en <= out_en_pre;
+
+assign SRAM_DATA = out_en ? sram_data_out : 18'bz  ;
 
 wire [17:0] DATA_2X;
 genvar ch_d;
 generate
-
 for (ch_d = 0; ch_d < 18; ch_d = ch_d + 1) begin: data_ch
     IDDR sram_data(
     .Q1(), .Q2(DATA_2X[ch_d]), 
