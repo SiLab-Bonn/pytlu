@@ -35,7 +35,7 @@ class Tlu(Dut):
         if conf==None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
         
-        self.data_dtype= np.dtype([('le3', 'u1'),('le2', 'u1'),('le1', 'u1'),('le0', 'u1'), ('time_stamp', 'u8'),('trigger_id', 'u4')])
+        self.data_dtype= np.dtype([('le0', 'u1'),('le1', 'u1'),('le2', 'u1'),('le3', 'u1'), ('time_stamp', 'u8'),('trigger_id', 'u4')])
         self.meta_data_dtype= np.dtype([('index_start', 'u4'),('index_stop', 'u4'),('data_length', 'u4'),
                                         ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'),('error', 'u4')])
     
