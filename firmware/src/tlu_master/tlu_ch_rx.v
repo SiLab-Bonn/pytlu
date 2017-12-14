@@ -121,7 +121,7 @@ always@(posedge CLK40)
     VALID <= (EN & IS_LE & (LAST_TOT > DIG_TH) & (LAST_RISING_RELATIVE > 2*16));
 
 always@(posedge CLK40)
-    LAST_RISING_REL <= LAST_RISING_RELATIVE & {8{EN}};
+    LAST_RISING_REL <= LAST_RISING_RELATIVE;
 
 
 endmodule

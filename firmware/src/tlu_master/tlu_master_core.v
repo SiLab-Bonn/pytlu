@@ -302,8 +302,15 @@ always@(posedge CLK40) begin
         LOST_DATA_CNT <= LOST_DATA_CNT +1;
 end
 
-///TODO: add some status? Lost count? Skipped triggers? LAST_RISING_REL is 6 bits enough?
-assign cdc_data = {TRIG_ID, TIME_STAMP, LAST_RISING_REL[3] + 8'd43, LAST_RISING_REL[2] + 8'd43, LAST_RISING_REL[1] + 8'd43, LAST_RISING_REL[0] + 8'd43}; 
+wire [7:0] LE [3:0];
+// calculate relative distance of LE of input signals to LE of TRIG_PULSE (generation of trigger signal), fixed offset is needed for correct relative distance
+assign LE[0] = CONF_EN_INPUT[0] ? LAST_RISING_REL[0] + 8'd43 : 0;
+assign LE[1] = CONF_EN_INPUT[1] ? LAST_RISING_REL[1] + 8'd43 : 0;
+assign LE[2] = CONF_EN_INPUT[2] ? LAST_RISING_REL[2] + 8'd43 : 0;
+assign LE[3] = CONF_EN_INPUT[3] ? LAST_RISING_REL[3] + 8'd43 : 0;
+
+///TODO: add some status? Lost count? Skipped triggers?
+assign cdc_data = {TRIG_ID, TIME_STAMP, LE[3], LE[2], LE[1], LE[0]};
 assign cdc_fifo_write = GEN_TRIG_PULSE;
 
 wire [127:0] cdc_data_out;
