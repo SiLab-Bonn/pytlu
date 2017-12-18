@@ -4,8 +4,6 @@
 
 DAQ software and firmware for the [Trigger Logic Unit (TLU)](https://twiki.cern.ch/twiki/bin/view/MimosaTelescope/TLU).
 
-**WORK IN PROGRESS...** 
-
 ## Description
 
 The main features of the DAQ software and FPGA firmware are:
@@ -29,20 +27,17 @@ The data of all accepted triggers will be stored in a .h5 file. It contains the 
 
 Install [conda](http://conda.pydata.org).
 
-After this, run the following commands to install the required packages:
+Install required packages:
 ```bash
-conda install --yes numpy bitarray pyyaml pytables 
-```
-Install [Basil](https://github.com/SiLab-Bonn/basil) via:
-```bash
-pip install basi_daq=2.4.x
+conda install numpy bitarray pyyaml pytables 
 ```
 
 Install pytlu via:
 ```bash
 pip install pytlu
 ```
-See [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
+
+For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
 
 ## Usage
 
