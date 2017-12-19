@@ -203,28 +203,28 @@ def main():
     parser = argparse.ArgumentParser(description='TLU DAQ \n example: sitlu -ie CH0 -oe CH0', formatter_class=argparse.RawTextHelpFormatter)
     
     parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
-                        help='Enabel input channels. Allowed values are '+', '.join(input_ch), metavar='CHx')
+                        help='Enable input channels. Allowed values are '+', '.join(input_ch), metavar='CHx')
     parser.add_argument('-oe','--output_enable', nargs='+', type=str, choices=output_ch, required=True,
-                        help='Enabel ouput channels. CHx and LEM0x are exclusiove. Allowed values are '+', '.join(output_ch), metavar='CHx/LEMOx')
-    parser.add_argument('-th', '--threshold', type=th_type, default=0, help="Digital threshold for input (in units of 1.5625ns). default=0",metavar='0...31')
-    parser.add_argument('-ds', '--distance', type=th_type, default=31, help="Maximum distance betwean inputs rise time (in units of 1.5625ns). default=31",metavar='0...31')
-    parser.add_argument('-t', '--test', type=int, help="Generate triggers with given distance.", metavar='1...n')
-    parser.add_argument('-c', '--count', type=int, default=0, help="How many triggers. 0=infinite (default) ", metavar='0...n')
-    parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout. default=65535 0=disabled", metavar='0...65535')
+                        help='Enable ouput channels. CHx and LEM0x are exclusive. Allowed values are '+', '.join(output_ch), metavar='CHx/LEMOx')
+    parser.add_argument('-th', '--threshold', type=th_type, default=0, help="Digital threshold for input (in units of 1.5625ns). Default=0",metavar='0...31')
+    parser.add_argument('-ds', '--distance', type=th_type, default=31, help="Maximum distance between inputs rise time (in units of 1.5625ns). Default=31, 0=disabled",metavar='0...31')
+    parser.add_argument('-t', '--test', type=int, help="Generate triggers with given distance (in units of 25 ns).", metavar='1...n')
+    parser.add_argument('-c', '--count', type=int, default=0, help="Number of generated triggers. 0=infinite (default) ", metavar='0...n')
+    parser.add_argument('--timeout', type=int, default=0xffff, help="Timeout to wait for DUT. Default=65535, 0=disabled", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input. Allowed values are '+', '.join(input_ch), metavar='CHx')
-    parser.add_argument('-l', '--log',  type=str, default=None, help='log file name')
-    parser.add_argument('-d', '--data',  type=str, default=None, help='data file name')
+    parser.add_argument('-l', '--log',  type=str, default=None, help='Name of log file')
+    parser.add_argument('-d', '--data',  type=str, default=None, help='Name of data file')
     
     args = parser.parse_args()
-    
+
     chip = Tlu(log_file = args.log, data_file = args.data)
     chip.init()
 
     ch_no = [int(x[-1]) for x in args.output_enable]
     for i in range(4):
         if ch_no.count(i) > 1:
-            raise argparse.ArgumentTypeError("Output channels. CHx and LEM0x are exclusiove")
+            raise argparse.ArgumentTypeError("Output channels. CHx and LEM0x are exclusive")
 
     for oe in args.output_enable:
         if oe[0] == 'C':
