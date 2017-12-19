@@ -138,7 +138,7 @@ class FifoReadout(object):
     def print_readout_status(self):
         tlu_lost_count = self.get_data_tlu_fifo_lost_count()
         
-        logging.info('Recived words: %d', self._record_count)
+        logging.info('Received words: %d', self._record_count)
         logging.info('Data queue size: %d', len(self._data_deque))
         logging.info('SRAM FIFO size: %d', self.dut['stream_fifo']['SIZE'])
         logging.info('Channel:                     %s', " | ".join(['TLU']))
