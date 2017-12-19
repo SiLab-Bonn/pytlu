@@ -44,7 +44,7 @@ class Tlu(Dut):
         self._first_read = False
         
         self.log_file = self.output_filename + '.log'
-        if data_file:
+        if log_file:
             self.log_file = log_file
         
         self.fh = logging.FileHandler(self.log_file )
