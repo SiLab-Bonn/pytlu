@@ -261,11 +261,13 @@ def main():
         in_inv = in_inv | (0x01 << int(ie[-1]))
     
     chip['tlu_master'].INVERT_INPUT = in_inv
-    
-    
-    def print_log(): 
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skiped: %2d Timeout: %2d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER))
-        
+
+    def print_log(freq=None):
+        if freq is not None:
+            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %2d Timeout: %2d Av. Rate: %.2f Hz" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER, freq))
+        else:
+            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %2d Timeout: %2d" % (time.time() - start_time, chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER))
+
     if args.test:
         logging.info("Starting test...")
         with chip.readout():
@@ -273,29 +275,45 @@ def main():
             chip['test_pulser'].WIDTH = 1
             chip['test_pulser'].REPEAT = args.count
             chip['test_pulser'].START
-            
+
             start_time = time.time()
-            
+            time_2 = 0
+            trigger_id_2 = 0
+
             while(not chip['test_pulser'].is_ready):
-                print_log()
+                time_1 = time.time()
+                trigger_id_1 = chip['tlu_master'].TRIGGER_ID
+                freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
+                print_log(freq=freq)
+                time_2 = time.time()
+                trigger_id_2 = chip['tlu_master'].TRIGGER_ID
                 time.sleep(1)
             print_log()
         return
     
     logging.info("Starting ... Ctrl+C to exit")
     start_time = time.time()
+    time_2 = 0
+    trigger_id_2 = 0
     stop = False
     with chip.readout():
         chip['tlu_master'].EN_INPUT = in_en
+        print in_en, 'INPUT ENABLE'
         while not stop:
             try:
-                print_log()
+                time_1 = time.time()
+                trigger_id_1 = chip['tlu_master'].TRIGGER_ID
+                freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
+                print_log(freq=freq)
+                time_2 = time.time()
+                trigger_id_2 = chip['tlu_master'].TRIGGER_ID
                 time.sleep(1)
             except KeyboardInterrupt:
                 chip['tlu_master'].EN_INPUT  = 0
                 chip['tlu_master'].EN_OUTPUT = 0
                 stop = True
         print_log()
+        
             
 if __name__ == '__main__':
     main()
