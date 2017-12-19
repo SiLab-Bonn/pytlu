@@ -135,7 +135,7 @@ class Tlu(Dut):
             how_much_read = (stream_fifo_size/512 +1)*512
             
             self['stream_fifo'].SET_COUNT = how_much_read
-            ret = self['intf'].read(0x0001000000000000, how_much_read)
+            ret = self['intf'].read(0x0001000000000000, how_much_read)[:stream_fifo_size]
             
             retint = np.frombuffer(ret, dtype=self.data_dtype)
             retint = retint[retint['time_stamp'] >0]
