@@ -264,16 +264,16 @@ zbt_sram_ctl zbt_sram_ctl(
     );
 
 reg is_data_out;
-always @(posedge STREAM_CLK) 
+always @(negedge STREAM_CLK) 
     if(STREAM_RST)
         is_data_out <= 0;
     else if(sram_read)
         is_data_out <= sram_rd_addr_inc;
 
-always @(posedge STREAM_CLK) 
+always @(negedge STREAM_CLK) 
     STREAM_DATA <= is_data_out ? sram_data_out : 16'b0;
     
-always @(posedge STREAM_CLK) 
+always @(negedge STREAM_CLK) 
     STREAM_WRITE_N <= !stream_data_valid;
 
 //This is one big HACK!
