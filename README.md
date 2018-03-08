@@ -39,6 +39,22 @@ pip install pytlu
 
 For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
 
+
+If you use the TLU for the first time, you need to add a udev rule in order to set the correct permissions. Create the file `/etc/udev/rules.d/54-tlu.rules` and add the following lines:
+
+```
+# for Red Hat, e.g. SL5
+SYSFS{idVendor}=="165d", SYSFS{idProduct}=="0001", GROUP="NOROOTUSB", ←-
+MODE="0666"
+```
+if you are using a Red Hat-based distribution or:
+```
+# for Debian
+ACTION=="add", DRIVERS=="?*", ATTR{idVendor}=="165d",
+ATTR{idProduct}=="0001", MODE="0666"
+```
+in case you are using a debian-based distribution.
+
 ## Usage
 
 In order to get a description of the possible input arguments run:
