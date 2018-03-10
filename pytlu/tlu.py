@@ -31,7 +31,7 @@ class Tlu(Dut):
     PCA9555 = {'DIR': 6, 'OUT': 2}
     IP_SEL = {'RJ45': 0b11, 'LEMO': 0b10}
 
-    def __init__(self, conf=None, log_file=None, data_file=None):
+    def __init__(self, conf=None, log_file=None, data_file=None, monitor_addr=None):
 
         cnfg = conf
         logging.info("Loading configuration file from %s" % conf)
@@ -63,6 +63,18 @@ class Tlu(Dut):
             self.data_file = data_file
 
         logging.info('Data file name: %s', self.data_file)
+
+        ### open socket for monitor
+        if (monitor_addr==None): 
+            self.socket=None
+        else:
+            import pytlu.online_monitor.sender as sender
+            try:
+                self.socket = sender.init(monitor_addr)
+                self.logger.info('Inintialiying online_monitor: connected=%s'%monitor_addr)
+            except:
+                self.logger.warn('Inintialiying online_monitor: failed addr=%s'%monitor_addr)
+                self.socket=None
 
         super(Tlu, self).__init__(conf)
 
@@ -167,13 +179,21 @@ class Tlu(Dut):
         self.fifo_readout.stop()
         self.fifo_readout.print_readout_status()
 
+    def close(self):
+        ### close socket
+        if self.socket!=None:
+           try:
+               sender.close(self.socket)
+           except:
+               pass
+
     def handle_data(self, data_tuple):
         '''Handling of the data.
         '''
 
         total_words = self.data_table.nrows
 
-        print data_tuple[0]
+        #print data_tuple[0]
 
         self.data_table.append(data_tuple[0])
         self.data_table.flush()
@@ -188,6 +208,19 @@ class Tlu(Dut):
         self.meta_data_table.row['index_stop'] = total_words
         self.meta_data_table.row.append()
         self.meta_data_table.flush()
+        
+
+        ##### sending data to online monitor
+        if self.socket!=None:
+            try:
+                sender.send_data(self.socket,data_tuple)
+            except:
+                self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
+                try:
+                    sender.close(self.socket)
+                except:
+                    pass
+                self.socket=None
 
     def handle_err(self, exc):
         pass
@@ -226,10 +259,12 @@ def main():
                         default=None, help='Name of log file')
     parser.add_argument('-d', '--data',  type=str,
                         default=None, help='Name of data file')
+    parser.add_argument('--monitor_addr', type=str, default=None,
+                        help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
 
     args = parser.parse_args()
 
-    chip = Tlu(log_file=args.log, data_file=args.data)
+    chip = Tlu(log_file=args.log, data_file=args.data,monitor_addr=args.monitor_addr)
     chip.init()
 
     ch_no = [int(x[-1]) for x in args.output_enable]
@@ -281,6 +316,7 @@ def main():
             logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %2d Timeout: %2d" % (time.time() - start_time,
                                                                                                   chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER))
 
+
     if args.test:
         logging.info("Starting test...")
         with chip.readout():
@@ -326,6 +362,7 @@ def main():
                 chip['tlu_master'].EN_OUTPUT = 0
                 stop = True
         print_log()
+    chip.close()
 
 
 if __name__ == '__main__':
