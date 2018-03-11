@@ -258,7 +258,7 @@ def main():
     parser.add_argument('--timeout', type=int, default=0xffff,
                         help="Timeout to wait for DUT. Default=65535, 0=disabled", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
-                        help='Invert input. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
+                        help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
     parser.add_argument('-l', '--log',  type=str,
                         default=None, help='Name of log file')
     parser.add_argument('-d', '--data',  type=str,
@@ -310,7 +310,7 @@ def main():
     in_inv = 0
     for ie in args.input_invert:
         in_inv = in_inv | (0x01 << int(ie[-1]))
-
+    print in_inv
     chip['tlu_master'].INVERT_INPUT = in_inv
 
     def print_log(freq=None):
