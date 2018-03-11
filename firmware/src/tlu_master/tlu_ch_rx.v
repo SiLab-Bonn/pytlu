@@ -17,7 +17,7 @@ module tlu_ch_rx
     input wire CLK160,
     input wire CLK40,
     
-    input wire [3:0] TIME_STAMP,
+    input wire [11:0] TIME_STAMP,
     input wire [4:0] DIG_TH,
     input wire EN_INVERT,
     input wire EN,
@@ -25,9 +25,9 @@ module tlu_ch_rx
     input wire TLU_IN,
     
     output reg VALID,
-    output reg [7:0] LAST_RISING, LAST_FALLING,
-    output wire [7:0] LAST_TOT,
-    output reg [7:0] LAST_RISING_REL
+    output reg [15:0] LAST_RISING, LAST_FALLING,
+    output wire [15:0] LAST_TOT,
+    output reg [15:0] LAST_RISING_REL
     
 );
 
@@ -103,10 +103,10 @@ assign LAST_TOT = WAITING_FOR_TRAILING ? 8'hff: LAST_FALLING - LAST_RISING;//(LA
 wire RISING;
 assign RISING = (RISING_EDGES_CNT > 0);
     
-wire [7:0] CURRENT_TIME;
-assign CURRENT_TIME = {TIME_STAMP[3:0], 4'b0};
+wire [15:0] CURRENT_TIME;
+assign CURRENT_TIME = {TIME_STAMP[11:0], 4'b0};
 
-wire [7:0] LAST_RISING_RELATIVE;
+wire [15:0] LAST_RISING_RELATIVE;
 assign LAST_RISING_RELATIVE = CURRENT_TIME - LAST_RISING;
 reg IS_LE;
 always@(posedge CLK40)
@@ -114,7 +114,7 @@ always@(posedge CLK40)
         IS_LE <= 0;
     else if (RISING) 
         IS_LE <= 1;
-    else if (LAST_RISING_RELATIVE > 16*5)
+    else if (LAST_RISING_RELATIVE > 16*(2+3+10)) // 10 clock longer than original
         IS_LE <= 0;
     
 always@(posedge CLK40)
