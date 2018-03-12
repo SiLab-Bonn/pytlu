@@ -38,8 +38,9 @@ class Tlu(Dut):
         if conf is None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
 
-        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
-                                    ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
+        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),('le3', 'u1'), 
+        #self.data_dtype = np.dtype([('le0', 'u2'), ('le2', 'u2'),
+                                    ('time_stamp', 'u8'), ('trigger_id', 'u4')])
         self.meta_data_dtype = np.dtype([('index_start', 'u4'), ('index_stop', 'u4'), ('data_length', 'u4'),
                                          ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4')])
 
@@ -144,16 +145,25 @@ class Tlu(Dut):
 
     def get_fifo_data(self):
         stream_fifo_size = self['stream_fifo'].SIZE
-
-        if stream_fifo_size != 0:
+        if stream_fifo_size >= 16:
             how_much_read = (stream_fifo_size / 512 + 1) * 512
-
             self['stream_fifo'].SET_COUNT = how_much_read
             ret = self['intf'].read(0x0001000000000000, how_much_read)
-
+        #if len(ret) >= 16:
             retint = np.frombuffer(ret, dtype=self.data_dtype)
+            #retint = np.frombuffer(self.ret[:(len(self.ret)//16)*16], dtype=self.data_dtype)
+            #print len(retint),
             retint = retint[retint['time_stamp'] > 0]
-
+            #print len(retint),
+            if len(ret)>=16:
+            #    print type(ret)
+                for i in range(16):
+                    print hex(ret[i]),
+                print len(retint),len(ret)//16, retint[0]
+            #self.ret=self.ret[(len(self.ret)//16)*16:]
+            #print len(self.ret)
+            #    for i in range(8):
+            #        print i,retint[i]
             return retint
         else:
             return np.array([], dtype=self.data_dtype)
@@ -310,12 +320,11 @@ def main():
     in_inv = 0
     for ie in args.input_invert:
         in_inv = in_inv | (0x01 << int(ie[-1]))
-    print in_inv
     chip['tlu_master'].INVERT_INPUT = in_inv
 
     def print_log(freq=None):
         if freq is not None:
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %2d Timeout: %2d Av. Rate: %.2f Hz" % (time.time() - start_time,
+            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %8d Timeout: %2d Av. Rate: %.2f Hz" % (time.time() - start_time,
                                                                                                                     chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER, freq))
         else:
             logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %2d Timeout: %2d" % (time.time() - start_time,
@@ -352,7 +361,6 @@ def main():
     stop = False
     with chip.readout():
         chip['tlu_master'].EN_INPUT = in_en
-        print in_en, 'INPUT ENABLE'
         while not stop:
             try:
                 time_1 = time.time()

@@ -59,7 +59,7 @@ wire [4:0] CONF_N_BITS_TRIGGER_ID;
 assign CONF_N_BITS_TRIGGER_ID = status_regs[9][4:0];
 wire [5:0] CONF_EN_OUTPUT;
 assign CONF_EN_OUTPUT = status_regs[6][5:0];
-reg [7:0] SKIP_TRIG_COUNTER;
+reg [31:0] SKIP_TRIG_COUNTER;
 reg [7:0] TIMEOUT_COUNTER;
 
 wire [15:0] CONF_TIME_OUT;
@@ -71,6 +71,7 @@ reg [31:0] TRIG_ID;
 reg [7:0] LOST_DATA_CNT; 
 reg [63:0] TIME_STAMP_BUF; 
 reg [31:0] TRIG_ID_BUF;
+reg [31:0] SKIP_TRIG_COUNTER_BUF;
     
 always @(posedge BUS_CLK) begin
     if(RST) begin
@@ -137,10 +138,16 @@ always @(posedge BUS_CLK) begin
         else if(BUS_ADD == 27)
             BUS_DATA_OUT <= TRIG_ID_BUF[31:24];
         else if(BUS_ADD == 28)
-            BUS_DATA_OUT <= SKIP_TRIG_COUNTER;
+            BUS_DATA_OUT <= SKIP_TRIG_COUNTER[7:0];
         else if(BUS_ADD == 29)
-            BUS_DATA_OUT <= TIMEOUT_COUNTER;
+            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[15:8];
         else if(BUS_ADD == 30)
+            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[23:16];
+        else if(BUS_ADD == 31)
+            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[31:24];
+        else if(BUS_ADD == 32)
+            BUS_DATA_OUT <= TIMEOUT_COUNTER;
+        else if(BUS_ADD == 33)
             BUS_DATA_OUT <= LOST_DATA_CNT;
         else
             BUS_DATA_OUT <= 0;
@@ -160,6 +167,13 @@ always @ (posedge BUS_CLK) begin
     else if (BUS_ADD == 24 && BUS_RD)
             TRIG_ID_BUF <= TRIG_ID;
 end
+always @ (posedge BUS_CLK) begin
+    if (RST)
+        SKIP_TRIG_COUNTER_BUF <= 32'b0;
+    else if (BUS_ADD == 28 && BUS_RD)
+            SKIP_TRIG_COUNTER_BUF <= SKIP_TRIG_COUNTER;
+end
+
 
 wire RST_SYNC;
 cdc_reset_sync rst_pulse_sync (.clk_in(BUS_CLK), .pulse_in(RST), .clk_out(CLK40), .pulse_out(RST_SYNC));
@@ -192,8 +206,7 @@ for (ch = 0; ch < 4; ch = ch + 1) begin: tlu_ch
         .EN_INVERT(CONF_INPUT_INVERT[ch]),
         .TLU_IN(BEAM_TRIGGER[ch]),
         
-        .DIG_TH(CONF_DIG_TH_INPUT),
-        //.EN(CONF_EN_INPUT[ch]),
+        .DIG_TH({11'b0, CONF_DIG_TH_INPUT}),
         .EN(1'b1),
         
         .VALID(VALID[ch]),
@@ -227,7 +240,7 @@ always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST
     end
 end
 
-wire [7:0] LE_DISTANCE;
+wire [15:0] LE_DISTANCE;
 assign LE_DISTANCE = MAX_LE - MIN_LE;
 wire GEN_TRIG;
 assign GEN_TRIG = ((LE_DISTANCE < CONF_MAX_LE_DISTANCE) && ( (VALID & CONF_EN_INPUT) == CONF_EN_INPUT) && (CONF_EN_INPUT > 0))  || TEST_PULSE;
@@ -242,7 +255,7 @@ wire TRIG_PULSE = (GEN_TRIG_FF[0] == 1 & GEN_TRIG_FF[1] == 0);
 //wire TRIG_PULSE = (GEN_TRIG_FF[0] == 0 & GEN_TRIG == 1);
 assign GEN_TRIG_PULSE =  TRIG_PULSE & (&READY);
 
-reg [10:0] GEN_CDC_FIFO_FF;
+reg [10:0] GEN_CDC_FIFO_FF;  /// in tlu_ch_rx VALID goes F when realtive_le > 16*15 ...
 wire GEN_CDC_FIFO_PULSE;
 always@(posedge CLK40)
         GEN_CDC_FIFO_FF <= {GEN_CDC_FIFO_FF[10:0], GEN_TRIG_PULSE};
@@ -254,7 +267,7 @@ wire SKIP_TRIGGER = TRIG_PULSE & !GEN_TRIG_PULSE;
 always@(posedge CLK40)
     if(RST_SYNC | START_SYNC)
         SKIP_TRIG_COUNTER <= 0;
-    else if(SKIP_TRIGGER & SKIP_TRIG_COUNTER!=8'hff )
+    else if(SKIP_TRIGGER)   // & SKIP_TRIG_COUNTER!=32'hffffffff ) //maybe allow overflow..
         SKIP_TRIG_COUNTER <= SKIP_TRIG_COUNTER + 1;
 
 
@@ -305,7 +318,7 @@ always@(posedge CLK40)
         TIMEOUT_COUNTER <= TIMEOUT_COUNTER + 1;
     
 wire cdc_wfull;
-wire [159:0] cdc_data;
+wire [127:0] cdc_data;
 wire fifo_full, cdc_fifo_empty;
 wire cdc_fifo_write;
     
@@ -316,19 +329,20 @@ always@(posedge CLK40) begin
         LOST_DATA_CNT <= LOST_DATA_CNT +1;
 end
 
-wire [15:0] LE [3:0];
+wire [7:0] LE [3:0];
 // calculate relative distance of LE of input signals to LE of TRIG_PULSE (generation of trigger signal), fixed offset is needed for correct relative distance
-assign LE[0] = VALID[0] ? LAST_RISING_REL[0] + 16'd43 : 0;
-assign LE[1] = VALID[1] ? LAST_RISING_REL[1] + 16'd43 : 0;
-assign LE[2] = VALID[2] ? LAST_RISING_REL[2] + 16'd43 : 0;
-assign LE[3] = VALID[3] ? LAST_RISING_REL[3] + 16'd43 : 0;
+//assign LE[0] = VALID[0] ? LAST_RISING_REL[0] + 16'd43 : 0;
+assign LE[0] = VALID[0] ? LAST_RISING_REL[0][7:0] : 0;
+assign LE[1] = VALID[1] ? LAST_RISING_REL[1][7:0] : 0;
+assign LE[2] = VALID[2] ? LAST_RISING_REL[2][7:0] : 0;
+assign LE[3] = VALID[3] ? LAST_RISING_REL[3][7:0] : 0;
 
 ///TODO: add some status? Lost count? Skipped triggers?
 assign cdc_data = {TRIG_ID, TIME_STAMP, LE[3], LE[2], LE[1], LE[0]};
 assign cdc_fifo_write = GEN_CDC_FIFO_PULSE;
 
-wire [159:0] cdc_data_out;
-cdc_syncfifo #(.DSIZE(160), .ASIZE(3)) cdc_syncfifo
+wire [127:0] cdc_data_out;
+cdc_syncfifo #(.DSIZE(128), .ASIZE(3)) cdc_syncfifo
 (
     .rdata(cdc_data_out),
     .wfull(cdc_wfull),
@@ -339,9 +353,9 @@ cdc_syncfifo #(.DSIZE(160), .ASIZE(3)) cdc_syncfifo
 );
 
 wire out_fifo_read;
-wire [159:0] out_fifo_data_out;
+wire [127:0] out_fifo_data_out;
 wire out_fifo_empty;
-gerneric_fifo #(.DATA_SIZE(160), .DEPTH(64))  gerneric_fifo
+gerneric_fifo #(.DATA_SIZE(128), .DEPTH(64))  gerneric_fifo
 ( 
     .clk(BUS_CLK), .reset(RST),
     .write(!cdc_fifo_empty),
@@ -352,29 +366,27 @@ gerneric_fifo #(.DATA_SIZE(160), .DEPTH(64))  gerneric_fifo
     .data_out(out_fifo_data_out), .size()
 );
 
-reg [3:0] out_word_cnt;
+reg [2:0] out_word_cnt;
 assign out_fifo_read = (out_word_cnt==0 & !out_fifo_empty && FIFO_READ);
 
 always@(posedge BUS_CLK)
     if(RST)
         out_word_cnt <= 0;
-	 else if (out_word_cnt == 9)
-	     out_word_cnt <= 0;
     else if (FIFO_READ)
         out_word_cnt <= out_word_cnt + 1;
     
-reg [159:0] fifo_data_out_buf;
+reg [127:0] fifo_data_out_buf;
 always@(posedge BUS_CLK)
     if(out_fifo_read)
         fifo_data_out_buf <= out_fifo_data_out;
         
-wire [15:0]  fifo_data_out_word [9:0];
+wire [15:0]  fifo_data_out_word [7:0];
     
     
 genvar iw;
 generate
     assign fifo_data_out_word[0] = out_fifo_data_out[15:0];
-    for (iw = 1; iw < 10; iw = iw + 1) begin: gen_out
+    for (iw = 1; iw < 8; iw = iw + 1) begin: gen_out
          assign fifo_data_out_word[iw] = fifo_data_out_buf[(iw+1)*16-1:iw*16];
     end
 endgenerate 

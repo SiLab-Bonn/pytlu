@@ -157,6 +157,7 @@ class FifoReadout(object):
         time_wait = 0.0
         while not self.force_stop.wait(time_wait if time_wait >= 0.0 else 0.0):
             try:
+            #if True:
                 time_read = time()
                 if no_data_timeout and curr_time + no_data_timeout < self.get_float_time():
                     raise NoDataTimeout('Received no data for %0.1f second(s)' % no_data_timeout)
