@@ -368,7 +368,6 @@ def main():
                 time_2 = time.time()
                 trigger_id_2 = chip['tlu_master'].TRIGGER_ID
                 skip2=skip1
-                print time_1-start_time+10, args.scan_time, time_1-start_time+10 > args.scan_time,  args.scan_time>0
                 if time_1-start_time+10 > args.scan_time and args.scan_time>0: 
                     break
                 elif time_1-start_time < 30:
