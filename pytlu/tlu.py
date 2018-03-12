@@ -91,6 +91,7 @@ class Tlu(Dut):
         # every secount time?
         self['stream_fifo'].SET_COUNT = 8 * 512
         self['intf'].read(0x0001000000000000, 8 * 512)
+        self['tlu_master'].get_configuration()
 
         self.write_i2c_config()
 
@@ -178,6 +179,7 @@ class Tlu(Dut):
             self.h5_file = tb.open_file(self.data_file, mode='w', title='TLU')
             self.data_table = self.h5_file.create_table(self.h5_file.root, name='raw_data', description=self.data_dtype, title='data', filters=self.filter_data)
             self.meta_data_table = self.h5_file.create_table(self.h5_file.root, name='meta_data', description=self.meta_data_dtype, title='meta_data', filters=self.filter_tables)
+            self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
 
             self.fifo_readout = FifoReadout(self)
             self.fifo_readout.print_readout_status()
@@ -188,6 +190,7 @@ class Tlu(Dut):
         yield
         self.fifo_readout.stop()
         self.fifo_readout.print_readout_status()
+        self.meta_data_table.attrs.config=yaml.dump(self.get_configuration())
 
     def close(self):
         ### close socket
@@ -275,6 +278,8 @@ def main():
                         default=None, help='Name of data file')
     parser.add_argument('--monitor_addr', type=str, default=None,
                         help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
+    parser.add_argument('--scan_time', type=int, default=0,
+                        help="Scan time in seconds. Default=disabled, disable=0")
 
     args = parser.parse_args()
 
@@ -322,14 +327,20 @@ def main():
         in_inv = in_inv | (0x01 << int(ie[-1]))
     chip['tlu_master'].INVERT_INPUT = in_inv
 
-    def print_log(freq=None):
-        if freq is not None:
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %8d Timeout: %2d Av. Rate: %.2f Hz" % (time.time() - start_time,
-                                                                                                                    chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER, freq))
-        else:
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %2d Timeout: %2d" % (time.time() - start_time,
-                                                                                                  chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER))
+    def print_log(freq=None,freq_all=None):
+        if freq== None:
+            freq=0
+        if freq_all==None:
+            freq_all=0
+        logging.info("Time: %.2f TriggerId: %8d Skip: %8d Timeout: %2d Av. Rate: %.2f Hz (%.2fHz)" % (time.time() - start_time,
+                      chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
+                      freq,freq_all))
 
+
+    start_time = time.time()
+    time_2 = 0
+    trigger_id_2 = 0
+    skip2 = 0
 
     if args.test:
         logging.info("Starting test...")
@@ -339,44 +350,49 @@ def main():
             chip['test_pulser'].REPEAT = args.count
             chip['test_pulser'].START
 
-            start_time = time.time()
-            time_2 = 0
-            trigger_id_2 = 0
-
             while(not chip['test_pulser'].is_ready):
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
+                skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
-                print_log(freq=freq)
+                freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
+                print_log(freq=freq,freq_all=freq_all)
                 time_2 = time.time()
                 trigger_id_2 = chip['tlu_master'].TRIGGER_ID
+                skip2=skip1
                 time.sleep(1)
             print_log()
         return
 
-    logging.info("Starting ... Ctrl+C to exit")
-    start_time = time.time()
-    time_2 = 0
-    trigger_id_2 = 0
-    stop = False
+    logging.info("Starting ... Ctrl+C to exit scan_time=%ds"%args.scan_time)
     with chip.readout():
         chip['tlu_master'].EN_INPUT = in_en
-        while not stop:
+        while True:
             try:
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
+                skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
-                print_log(freq=freq)
+                freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
+                print_log(freq=freq,freq_all=freq_all)
                 time_2 = time.time()
                 trigger_id_2 = chip['tlu_master'].TRIGGER_ID
-                time.sleep(1)
+                skip2=skip1
+                print time_1-start_time+10 > args.scan_time,  args.scan_time>0
+                if time_1-start_time+10 > args.scan_time and args.scan_time>0: 
+                    break
+                elif time_1-start_time < 30:
+                    time.sleep(1)
+                else:
+                    time.sleep(10)
             except KeyboardInterrupt:
                 chip['tlu_master'].EN_INPUT = 0
                 chip['tlu_master'].EN_OUTPUT = 0
-                stop = True
+                break
+            if args.scan_time >0:
+                time.sleep(args.scan_time-time.time()+start_time)
         print_log()
     chip.close()
-
 
 if __name__ == '__main__':
     main()
