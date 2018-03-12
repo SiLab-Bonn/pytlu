@@ -39,7 +39,6 @@ class Tlu(Dut):
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
 
         self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),('le3', 'u1'), 
-        #self.data_dtype = np.dtype([('le0', 'u2'), ('le2', 'u2'),
                                     ('time_stamp', 'u8'), ('trigger_id', 'u4')])
         self.meta_data_dtype = np.dtype([('index_start', 'u4'), ('index_stop', 'u4'), ('data_length', 'u4'),
                                          ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4')])
@@ -91,6 +90,7 @@ class Tlu(Dut):
         # every secount time?
         self['stream_fifo'].SET_COUNT = 8 * 512
         self['intf'].read(0x0001000000000000, 8 * 512)
+        self['tlu_master'].get_configuration()
 
         self.write_i2c_config()
 
@@ -149,21 +149,8 @@ class Tlu(Dut):
             how_much_read = (stream_fifo_size / 512 + 1) * 512
             self['stream_fifo'].SET_COUNT = how_much_read
             ret = self['intf'].read(0x0001000000000000, how_much_read)
-        #if len(ret) >= 16:
             retint = np.frombuffer(ret, dtype=self.data_dtype)
-            #retint = np.frombuffer(self.ret[:(len(self.ret)//16)*16], dtype=self.data_dtype)
-            #print len(retint),
             retint = retint[retint['time_stamp'] > 0]
-            #print len(retint),
-            if len(ret)>=16:
-            #    print type(ret)
-                for i in range(16):
-                    print hex(ret[i]),
-                print len(retint),len(ret)//16, retint[0]
-            #self.ret=self.ret[(len(self.ret)//16)*16:]
-            #print len(self.ret)
-            #    for i in range(8):
-            #        print i,retint[i]
             return retint
         else:
             return np.array([], dtype=self.data_dtype)
@@ -178,6 +165,7 @@ class Tlu(Dut):
             self.h5_file = tb.open_file(self.data_file, mode='w', title='TLU')
             self.data_table = self.h5_file.create_table(self.h5_file.root, name='raw_data', description=self.data_dtype, title='data', filters=self.filter_data)
             self.meta_data_table = self.h5_file.create_table(self.h5_file.root, name='meta_data', description=self.meta_data_dtype, title='meta_data', filters=self.filter_tables)
+            self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
 
             self.fifo_readout = FifoReadout(self)
             self.fifo_readout.print_readout_status()
@@ -188,8 +176,13 @@ class Tlu(Dut):
         yield
         self.fifo_readout.stop()
         self.fifo_readout.print_readout_status()
+        self.meta_data_table.attrs.config=yaml.dump(self.get_configuration())
 
     def close(self):
+        try:
+            self.h5_file.close()
+        except:
+            pass
         ### close socket
         if self.socket!=None:
            try:
@@ -222,15 +215,15 @@ class Tlu(Dut):
 
         ##### sending data to online monitor
         if self.socket!=None:
-            try:
+            #try:
                 sender.send_data(self.socket,data_tuple)
-            except:
-                self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
-                try:
-                    sender.close(self.socket)
-                except:
-                    pass
-                self.socket=None
+            #except:
+            #    self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
+            #    try:
+            #        sender.close(self.socket)
+            #    except:
+            #        pass
+            #    self.socket=None
 
     def handle_err(self, exc):
         pass
@@ -271,6 +264,8 @@ def main():
                         default=None, help='Name of data file')
     parser.add_argument('--monitor_addr', type=str, default=None,
                         help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
+    parser.add_argument('--scan_time', type=int, default=0,
+                        help="Scan time in seconds. Default=disabled, disable=0")
 
     args = parser.parse_args()
 
@@ -317,14 +312,20 @@ def main():
         in_inv = in_inv | (0x01 << int(ie[-1]))
     chip['tlu_master'].INVERT_INPUT = in_inv
 
-    def print_log(freq=None):
-        if freq is not None:
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %8d Timeout: %2d Av. Rate: %.2f Hz" % (time.time() - start_time,
-                                                                                                                    chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER, freq))
-        else:
-            logging.info("Time: %.2f TriggerId: %8d TimeStamp: %16d Skipped: %2d Timeout: %2d" % (time.time() - start_time,
-                                                                                                  chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].TIME_STAMP, chip['tlu_master'].SKIP_TRIGGER_COUNT, chip['tlu_master'].TIMEOUT_COUNTER))
+    def print_log(freq=None,freq_all=None):
+        if freq== None:
+            freq=0
+        if freq_all==None:
+            freq_all=0
+        logging.info("Time: %.2f TriggerId: %8d Skip: %8d Timeout: %2d Av. Rate: %.2f Hz (%.2fHz)" % (time.time() - start_time,
+                      chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
+                      freq,freq_all))
 
+
+    start_time = time.time()
+    time_2 = 0
+    trigger_id_2 = 0
+    skip2 = 0
 
     if args.test:
         logging.info("Starting test...")
@@ -334,44 +335,49 @@ def main():
             chip['test_pulser'].REPEAT = args.count
             chip['test_pulser'].START
 
-            start_time = time.time()
-            time_2 = 0
-            trigger_id_2 = 0
-
             while(not chip['test_pulser'].is_ready):
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
+                skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
-                print_log(freq=freq)
+                freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
+                print_log(freq=freq,freq_all=freq_all)
                 time_2 = time.time()
                 trigger_id_2 = chip['tlu_master'].TRIGGER_ID
+                skip2=skip1
                 time.sleep(1)
             print_log()
         return
 
-    logging.info("Starting ... Ctrl+C to exit")
-    start_time = time.time()
-    time_2 = 0
-    trigger_id_2 = 0
-    stop = False
+    logging.info("Starting ... Ctrl+C to exit scan_time=%ds"%args.scan_time)
     with chip.readout():
         chip['tlu_master'].EN_INPUT = in_en
-        while not stop:
+        while True:
             try:
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
+                skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
-                print_log(freq=freq)
+                freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
+                print_log(freq=freq,freq_all=freq_all)
                 time_2 = time.time()
                 trigger_id_2 = chip['tlu_master'].TRIGGER_ID
-                time.sleep(1)
+                skip2=skip1
+                print time_1-start_time+10 > args.scan_time,  args.scan_time>0
+                if time_1-start_time+10 > args.scan_time and args.scan_time>0: 
+                    break
+                elif time_1-start_time < 30:
+                    time.sleep(1)
+                else:
+                    time.sleep(10)
             except KeyboardInterrupt:
                 chip['tlu_master'].EN_INPUT = 0
                 chip['tlu_master'].EN_OUTPUT = 0
-                stop = True
+                break
+            if args.scan_time >0:
+                time.sleep(args.scan_time-time.time()+start_time)
         print_log()
     chip.close()
-
 
 if __name__ == '__main__':
     main()
