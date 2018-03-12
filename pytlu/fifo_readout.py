@@ -163,7 +163,9 @@ class FifoReadout(object):
                     raise NoDataTimeout('Received no data for %0.1f second(s)' % no_data_timeout)
                 data = self.read_data()
                 self._record_count += len(data)
+                #print self._record_count
             except Exception:
+                logging.warn('Exception occured %s',sys.exc_info()[2])
                 no_data_timeout = None  # raise exception only once
                 if self.errback:
                     self.errback(sys.exc_info())
@@ -185,8 +187,8 @@ class FifoReadout(object):
                     break
                 else:
                     self._words_per_read.append(0)
-            finally:
-                time_wait = self.readout_interval - (time() - time_read)
+            #finally:
+            #    time_wait = self.readout_interval - (time() - time_read)
             if self._calculate.is_set():
                 self._calculate.clear()
                 self._result.put(sum(self._words_per_read))
