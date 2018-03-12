@@ -24,7 +24,8 @@ module tlu_tx
     parameter INV_OUT = 0
 )( 
     input wire SYS_CLK, CLK320, CLK160, SYS_RST, ENABLE, TRIG,
-    input wire [14:0] TRIG_ID,
+    input wire [30:0] TRIG_ID,
+	input wire [4:0] N_BITS_TRIGGER_ID,
     output wire READY,
     input wire [3:0] TRIG_LE,
     input wire [15:0] CONF_TIME_OUT,
@@ -80,14 +81,20 @@ always@(posedge CLK160)
 
 assign TLU_CLOCK_REAL = TLU_CLOCK_FF[4:3] == 2'b00 && TLU_CLOCK_FF[2:1] == 2'b11; //This is bad but seem to help for some cross-talk
 
-reg [15:0] TRIG_ID_SR;
+reg [31:0] TRIG_ID_SR;
 initial TRIG_ID_SR = 0;
 //always@(posedge TLU_CLOCK_REAL or posedge TRIG_FF)
+integer n;
 always@(posedge CLK160)
     if(TRIG_FF)
         TRIG_ID_SR <= {TRIG_ID, 1'b0};
     else if (TLU_CLOCK_REAL)
-        TRIG_ID_SR <= {1'b0, TRIG_ID_SR[15:1]};
+		// This loop basically does: TRIG_ID_SR <= {(32 - N_BITS_TRIGGER_ID)'b0, TRIG_ID_SR[N_BITS_TRIGGER_ID:1]}
+		for (n = 0; n < 31; n = n + 1)
+			if (n < N_BITS_TRIGGER_ID)
+				TRIG_ID_SR[n] <= TRIG_ID_SR[n+1];
+			else
+				TRIG_ID_SR[n] <= 1'b0;
 
 reg [31:0] WAIT_CNT;
 always@(posedge SYS_CLK) begin

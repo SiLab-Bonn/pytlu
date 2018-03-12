@@ -86,6 +86,7 @@ class TestSim(unittest.TestCase):
         self.dut['tlu_master'].MAX_DISTANCE = 10
         self.dut['tlu_master'].THRESHOLD = 0
         self.dut['tlu_master'].EN_OUTPUT = 1
+        self.dut['tlu_master'].N_BITS_TRIGGER_ID = 15
 
         self.dut['SEQ_TB'].set_repeat(1)
         self.dut['SEQ_TB']['T0'][:] = 0
@@ -117,6 +118,7 @@ class TestSim(unittest.TestCase):
         self.dut['tlu_master'].MAX_DISTANCE = 10
         self.dut['tlu_master'].THRESHOLD = 0
         self.dut['tlu_master'].EN_OUTPUT = 1
+        self.dut['tlu_master'].N_BITS_TRIGGER_ID = 15
         #self.dut['tlu_master'].TIMEOUT = 3
         
         how_many = 50

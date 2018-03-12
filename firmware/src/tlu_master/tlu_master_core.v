@@ -43,7 +43,7 @@ assign START = (BUS_ADD==1 && BUS_WR);
 wire RST;
 assign RST = BUS_RST | SOFT_RST; 
 
-reg [7:0] status_regs[8:0];
+reg [7:0] status_regs[9:0];
 
 wire CONF_DONE;
 wire [3:0] CONF_EN_INPUT;
@@ -55,6 +55,8 @@ wire [4:0] CONF_MAX_LE_DISTANCE;
 assign CONF_MAX_LE_DISTANCE = status_regs[4][4:0];
 wire [4:0] CONF_DIG_TH_INPUT;
 assign CONF_DIG_TH_INPUT = status_regs[5][4:0];
+wire [4:0] CONF_N_BITS_TRIGGER_ID;
+assign CONF_N_BITS_TRIGGER_ID = status_regs[9][4:0];
 wire [5:0] CONF_EN_OUTPUT;
 assign CONF_EN_OUTPUT = status_regs[6][5:0];
 reg [7:0] SKIP_TRIG_COUNTER;
@@ -81,8 +83,9 @@ always @(posedge BUS_CLK) begin
         status_regs[6] <= 8'b0;
         status_regs[7] <= 8'hff; //TIMEOUT
         status_regs[8] <= 8'hff;
+		  status_regs[9] <= 8'b0; //N_BITS_TRIGGER_ID
     end
-    else if(BUS_WR && BUS_ADD < 9)
+    else if(BUS_WR && BUS_ADD < 10)
         status_regs[BUS_ADD[3:0]] <= BUS_DATA_IN;
 end
 
@@ -104,8 +107,10 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= {2'b0, CONF_EN_OUTPUT};
         else if(BUS_ADD == 7)
             BUS_DATA_OUT <= CONF_TIME_OUT[7:0];
-         else if(BUS_ADD == 8)
+        else if(BUS_ADD == 8)
             BUS_DATA_OUT <= CONF_TIME_OUT[15:8];
+        else if(BUS_ADD == 9)
+            BUS_DATA_OUT <= {3'b0, CONF_N_BITS_TRIGGER_ID};
          
         else if(BUS_ADD == 16)
             BUS_DATA_OUT <= TIME_STAMP[7:0];
@@ -273,7 +278,8 @@ for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
             .SYS_RST(RST_SYNC), 
             .ENABLE(CONF_EN_OUTPUT[dut_ch]), 
             .TRIG(GEN_TRIG_PULSE),
-            .TRIG_ID(TRIG_ID_FF[14:0]),
+            .TRIG_ID(TRIG_ID_FF[30:0]),
+			.N_BITS_TRIGGER_ID(CONF_N_BITS_TRIGGER_ID),
             .READY(READY[dut_ch]),
             .CONF_TIME_OUT(CONF_TIME_OUT),
             .TIME_OUT(TIME_OUT[dut_ch]),

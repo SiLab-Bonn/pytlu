@@ -24,6 +24,8 @@ class tlu_master(RegisterHardwareLayer):
                   'EN_OUTPUT':          {'descr': {'addr': 6, 'size': 6, 'offset': 0}},
                   
                   'TIMEOUT':            {'descr': {'addr': 7, 'size': 16, 'offset': 0}},
+
+                  'N_BITS_TRIGGER_ID':  {'descr': {'addr': 9, 'size': 5, 'offset': 0}},
                  
                  'TIME_STAMP': {'descr': {'addr': 16, 'size': 64, 'properties': ['ro']}},
                  'TRIGGER_ID': {'descr': {'addr': 24, 'size': 32, 'properties': ['ro']}},

@@ -245,6 +245,8 @@ def main():
                         help='Enable ouput channels. CHx and LEM0x are exclusive. Allowed values are ' + ', '.join(output_ch), metavar='CHx/LEMOx')
     parser.add_argument('-th', '--threshold', type=th_type, default=0,
                         help="Digital threshold for input (in units of 1.5625ns). Default=0", metavar='0...31')
+    parser.add_argument('-b', '--n_bits', type=th_type, default=16,
+                        help="Number of bits for trigger ID. Should correspond to TLU_TRIGGER_MAX_CLOCK_CYCLES - 1 which is set for TLU module. Default=0", metavar='0...31')
     parser.add_argument('-ds', '--distance', type=th_type, default=31,
                         help="Maximum distance between inputs rise time (in units of 1.5625ns). Default=31, 0=disabled", metavar='0...31')
     parser.add_argument('-t', '--test', type=int,
@@ -291,6 +293,7 @@ def main():
     chip['tlu_master'].MAX_DISTANCE = args.distance
     chip['tlu_master'].THRESHOLD = args.threshold
     chip['tlu_master'].TIMEOUT = args.timeout
+    chip['tlu_master'].N_BITS_TRIGGER_ID = args.n_bits
 
     in_en = 0
     for ie in args.input_enable:
