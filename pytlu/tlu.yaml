@@ -7,8 +7,10 @@
 
 transfer_layer:
   - name  : intf
-    type  : pytlu.ZestSC1TL    init:
-        bit_file : tlu.bit
+    type  : pytlu.ZestSC1TL
+    init:
+        bit_file : ../firmware/ise/tlu.bit
+
 hw_drivers:
   - name      : gpio
     type      : gpio
