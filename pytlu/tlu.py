@@ -363,7 +363,7 @@ def main():
                 time_2 = time.time()
                 trigger_id_2 = chip['tlu_master'].TRIGGER_ID
                 skip2=skip1
-                print time_1-start_time+10 > args.scan_time,  args.scan_time>0
+                print time_1-start_time+10, args.scan_time, time_1-start_time+10 > args.scan_time,  args.scan_time>0
                 if time_1-start_time+10 > args.scan_time and args.scan_time>0: 
                     break
                 elif time_1-start_time < 30:
@@ -371,11 +371,11 @@ def main():
                 else:
                     time.sleep(10)
             except KeyboardInterrupt:
-                chip['tlu_master'].EN_INPUT = 0
-                chip['tlu_master'].EN_OUTPUT = 0
                 break
-            if args.scan_time >0:
-                time.sleep(args.scan_time-time.time()+start_time)
+        chip['tlu_master'].EN_INPUT = 0
+        chip['tlu_master'].EN_OUTPUT = 0
+        if args.scan_time >0:
+            time.sleep(args.scan_time-time.time()+start_time)      
         print_log()
     chip.close()
 
