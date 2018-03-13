@@ -16,7 +16,6 @@ import signal
 import tables as tb
 import numpy as np
 
-import pytlu.online_monitor.sender as sender
 from fifo_readout import FifoReadout
 from contextlib import contextmanager
 
@@ -70,7 +69,8 @@ class Tlu(Dut):
             self.socket=None
         else:
             try:
-                self.socket = sender.init(monitor_addr)
+                self.sender = __import__('pytlu.online_monitor.sender')
+                self.socket = self.sender.init(monitor_addr)
                 self.logger.info('Inintialiying online_monitor: connected=%s'%monitor_addr)
             except:
                 self.logger.warn('Inintialiying online_monitor: failed addr=%s'%monitor_addr)
@@ -183,7 +183,7 @@ class Tlu(Dut):
         ### close socket
         if self.socket!=None:
            try:
-               sender.close(self.socket)
+               self.sender.close(self.socket)
            except:
                pass
 
@@ -213,11 +213,11 @@ class Tlu(Dut):
         ##### sending data to online monitor
         if self.socket!=None:
             try:
-                sender.send_data(self.socket,data_tuple)
+                self.sender.send_data(self.socket,data_tuple)
             except:
                 self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
                 try:
-                    sender.close(self.socket)
+                    self.sender.close(self.socket)
                 except:
                     pass
                 self.socket=None
