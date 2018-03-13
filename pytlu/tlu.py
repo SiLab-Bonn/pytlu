@@ -186,7 +186,9 @@ class Tlu(Dut):
                self.sender.close(self.socket)
            except:
                pass
-
+        
+        super(Tlu, self).close()
+        
     def handle_data(self, data_tuple):
         '''Handling of the data.
         '''
