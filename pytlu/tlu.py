@@ -16,6 +16,7 @@ import signal
 import tables as tb
 import numpy as np
 
+import pytlu.online_monitor.sender as sender
 from fifo_readout import FifoReadout
 from contextlib import contextmanager
 
@@ -68,7 +69,6 @@ class Tlu(Dut):
         if (monitor_addr==None): 
             self.socket=None
         else:
-            import pytlu.online_monitor.sender as sender
             try:
                 self.socket = sender.init(monitor_addr)
                 self.logger.info('Inintialiying online_monitor: connected=%s'%monitor_addr)
