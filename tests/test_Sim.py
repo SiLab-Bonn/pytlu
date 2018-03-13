@@ -340,7 +340,7 @@ class TestSim(unittest.TestCase):
         
     def tearDown(self):
         self.dut.close()
-        time.sleep(1)
+        time.sleep(5)
         cocotb_compile_clean()
 
 
