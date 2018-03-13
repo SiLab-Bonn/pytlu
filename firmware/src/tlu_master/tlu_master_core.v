@@ -59,7 +59,7 @@ wire [4:0] CONF_N_BITS_TRIGGER_ID;
 assign CONF_N_BITS_TRIGGER_ID = status_regs[9][4:0];
 wire [5:0] CONF_EN_OUTPUT;
 assign CONF_EN_OUTPUT = status_regs[6][5:0];
-reg [7:0] SKIP_TRIG_COUNTER;
+reg [31:0] SKIP_TRIG_COUNTER;
 reg [7:0] TIMEOUT_COUNTER;
 
 wire [15:0] CONF_TIME_OUT;

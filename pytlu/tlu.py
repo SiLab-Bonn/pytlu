@@ -20,7 +20,9 @@ from fifo_readout import FifoReadout
 from contextlib import contextmanager
 
 signal.signal(signal.SIGINT, signal.default_int_handler)
-logging.getLogger().setLevel(logging.DEBUG)
+root_logger=logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
+root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
 
 
 class Tlu(Dut):
