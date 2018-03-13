@@ -17,19 +17,21 @@ module tlu_ch_rx
     input wire CLK160,
     input wire CLK40,
     
-    input wire [11:0] TIME_STAMP,
-    input wire [15:0] DIG_TH,
+    input wire [3:0] TIME_STAMP,
+    input wire [4:0] DIG_TH,
     input wire EN_INVERT,
     input wire EN,
     
     input wire TLU_IN,
     
     output reg VALID,
-    output reg [15:0] LAST_RISING, LAST_FALLING,
-    output wire [15:0] LAST_TOT,
-    output reg [15:0] LAST_RISING_REL
+    output reg [7:0] LAST_RISING, LAST_FALLING,
+    output wire [7:0] LAST_TOT,
+    output reg [7:0] LAST_RISING_REL
     
 );
+
+
 
 // de-serialize
 wire [CLKDV*4-1:0] TDC, TDC_DES;
@@ -79,32 +81,32 @@ always@(posedge CLK40)
         WAITING_FOR_TRAILING <= 0;
     else if(RISING_EDGES_CNT < FALLING_EDGES_CNT)
         WAITING_FOR_TRAILING <= 0;
-    else if(RISING_EDGES_CNT > FALLING_EDGES_CNT & EN)
+    else if(RISING_EDGES_CNT > FALLING_EDGES_CNT)
         WAITING_FOR_TRAILING <= 1;
 
 
 always@(posedge CLK40)
     if(RST)
         LAST_RISING <= 0;
-    else if (RISING_EDGES_CNT > 0 )
+    else if (RISING_EDGES_CNT > 0)
         LAST_RISING <= {TIME_STAMP, RISING_POS};
     
 always@(posedge CLK40)
     if(RST)
         LAST_FALLING <= 0;
-    else if (FALLING_EDGES_CNT > 0 )
+    else if (FALLING_EDGES_CNT > 0)
         LAST_FALLING <= {TIME_STAMP, FALLING_POS};
 
 
-assign LAST_TOT = WAITING_FOR_TRAILING ? 16'hffff: LAST_FALLING - LAST_RISING; //(LAST_FALLING > 0 && LAST_RISING < 0)? LAST_RISING - RISING_POS : LAST_FALLING - LAST_RISING; //TODO
+assign LAST_TOT = WAITING_FOR_TRAILING ? 8'hff: LAST_FALLING - LAST_RISING;//(LAST_FALLING > 0 && LAST_RISING < 0)? LAST_RISING - RISING_POS : LAST_FALLING - LAST_RISING; //TODO
 
 wire RISING;
 assign RISING = (RISING_EDGES_CNT > 0);
     
-wire [15:0] CURRENT_TIME;
-assign CURRENT_TIME = {TIME_STAMP[11:0], 4'b0};
+wire [7:0] CURRENT_TIME;
+assign CURRENT_TIME = {TIME_STAMP[3:0], 4'b0};
 
-wire [15:0] LAST_RISING_RELATIVE;
+wire [7:0] LAST_RISING_RELATIVE;
 assign LAST_RISING_RELATIVE = CURRENT_TIME - LAST_RISING;
 reg IS_LE;
 always@(posedge CLK40)
@@ -112,11 +114,11 @@ always@(posedge CLK40)
         IS_LE <= 0;
     else if (RISING) 
         IS_LE <= 1;
-    else if (LAST_RISING_RELATIVE > 16*(15+3))  // min: 2*16, max: (2+15+3)  8bits 
+    else if (LAST_RISING_RELATIVE > 16*5)
         IS_LE <= 0;
     
 always@(posedge CLK40)
-    VALID <= (IS_LE & (LAST_TOT > DIG_TH) & (LAST_RISING_RELATIVE > 2*16)); // last_rising_relatvie > dig_th+1, dig_th=0..31 
+    VALID <= (EN & IS_LE & (LAST_TOT > DIG_TH) & (LAST_RISING_RELATIVE > 2*16));
 
 always@(posedge CLK40)
     LAST_RISING_REL <= LAST_RISING_RELATIVE;

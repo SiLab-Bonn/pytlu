@@ -34,7 +34,7 @@ module tlu_master_core
     
 );
 
-localparam VERSION = 1;
+localparam VERSION = 2;
 
 wire SOFT_RST, START;
 assign SOFT_RST = (BUS_ADD==0 && BUS_WR); 
@@ -43,7 +43,7 @@ assign START = (BUS_ADD==1 && BUS_WR);
 wire RST;
 assign RST = BUS_RST | SOFT_RST; 
 
-reg [7:0] status_regs[8:0];
+reg [7:0] status_regs[9:0];
 
 wire CONF_DONE;
 wire [3:0] CONF_EN_INPUT;
@@ -55,9 +55,11 @@ wire [4:0] CONF_MAX_LE_DISTANCE;
 assign CONF_MAX_LE_DISTANCE = status_regs[4][4:0];
 wire [4:0] CONF_DIG_TH_INPUT;
 assign CONF_DIG_TH_INPUT = status_regs[5][4:0];
+wire [4:0] CONF_N_BITS_TRIGGER_ID;
+assign CONF_N_BITS_TRIGGER_ID = status_regs[9][4:0];
 wire [5:0] CONF_EN_OUTPUT;
 assign CONF_EN_OUTPUT = status_regs[6][5:0];
-reg [31:0] SKIP_TRIG_COUNTER;
+reg [7:0] SKIP_TRIG_COUNTER;
 reg [7:0] TIMEOUT_COUNTER;
 
 wire [15:0] CONF_TIME_OUT;
@@ -82,8 +84,9 @@ always @(posedge BUS_CLK) begin
         status_regs[6] <= 8'b0;
         status_regs[7] <= 8'hff; //TIMEOUT
         status_regs[8] <= 8'hff;
+		  status_regs[9] <= 8'b0; //N_BITS_TRIGGER_ID
     end
-    else if(BUS_WR && BUS_ADD < 9)
+    else if(BUS_WR && BUS_ADD < 10)
         status_regs[BUS_ADD[3:0]] <= BUS_DATA_IN;
 end
 
@@ -105,8 +108,10 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= {2'b0, CONF_EN_OUTPUT};
         else if(BUS_ADD == 7)
             BUS_DATA_OUT <= CONF_TIME_OUT[7:0];
-         else if(BUS_ADD == 8)
+        else if(BUS_ADD == 8)
             BUS_DATA_OUT <= CONF_TIME_OUT[15:8];
+        else if(BUS_ADD == 9)
+            BUS_DATA_OUT <= {3'b0, CONF_N_BITS_TRIGGER_ID};
          
         else if(BUS_ADD == 16)
             BUS_DATA_OUT <= TIME_STAMP[7:0];
@@ -169,7 +174,6 @@ always @ (posedge BUS_CLK) begin
             SKIP_TRIG_COUNTER_BUF <= SKIP_TRIG_COUNTER;
 end
 
-
 wire RST_SYNC;
 cdc_reset_sync rst_pulse_sync (.clk_in(BUS_CLK), .pulse_in(RST), .clk_out(CLK40), .pulse_out(RST_SYNC));
 
@@ -177,7 +181,7 @@ wire START_SYNC;
 cdc_pulse_sync start_pulse_sync (.clk_in(BUS_CLK), .pulse_in(START), .clk_out(CLK40), .pulse_out(START_SYNC));
 
 
-wire [15:0] LAST_RISING_REL [3:0]; 
+wire [7:0] LAST_RISING_REL [3:0]; 
 wire [3:0] VALID;
     
 always@(posedge CLK40)
@@ -196,13 +200,13 @@ for (ch = 0; ch < 4; ch = ch + 1) begin: tlu_ch
         .CLK320(CLK320),
         .CLK160(CLK160),
         .CLK40(CLK40),
-        .TIME_STAMP(TIME_STAMP[11:0]),
+        .TIME_STAMP(TIME_STAMP[3:0]),
         
         .EN_INVERT(CONF_INPUT_INVERT[ch]),
         .TLU_IN(BEAM_TRIGGER[ch]),
         
-        .DIG_TH({11'b0, CONF_DIG_TH_INPUT}),
-        .EN(1'b1),
+        .DIG_TH(CONF_DIG_TH_INPUT),
+        .EN(CONF_EN_INPUT[ch]),
         
         .VALID(VALID[ch]),
         .LAST_RISING(), 
@@ -213,18 +217,18 @@ for (ch = 0; ch < 4; ch = ch + 1) begin: tlu_ch
 end
 endgenerate 
     
-reg [15:0] MIN_LE;
+reg [7:0] MIN_LE;
 integer imin;
 
 always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST_RISING_REL[3] or CONF_EN_INPUT) begin
-    MIN_LE = 16'hffff;
+    MIN_LE = 8'hff;
     for(imin = 0; imin <4; imin = imin+1) begin
         if (CONF_EN_INPUT[imin] && LAST_RISING_REL[imin] < MIN_LE)
             MIN_LE = LAST_RISING_REL[imin];
     end
 end
 
-reg [15:0] MAX_LE;
+reg [7:0] MAX_LE;
 integer imax;
 
 always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST_RISING_REL[3] or CONF_EN_INPUT)  begin
@@ -235,10 +239,10 @@ always @ (LAST_RISING_REL[0] or LAST_RISING_REL[1] or LAST_RISING_REL[2] or LAST
     end
 end
 
-wire [15:0] LE_DISTANCE;
+wire [7:0] LE_DISTANCE;
 assign LE_DISTANCE = MAX_LE - MIN_LE;
 wire GEN_TRIG;
-assign GEN_TRIG = ((LE_DISTANCE < CONF_MAX_LE_DISTANCE) && ( (VALID & CONF_EN_INPUT) == CONF_EN_INPUT) && (CONF_EN_INPUT > 0))  || TEST_PULSE;
+assign GEN_TRIG = ((LE_DISTANCE < CONF_MAX_LE_DISTANCE) && (VALID == CONF_EN_INPUT) && (CONF_EN_INPUT > 0))  || TEST_PULSE;
 
 reg [1:0] GEN_TRIG_FF;
 always@(posedge CLK40)
@@ -250,19 +254,12 @@ wire TRIG_PULSE = (GEN_TRIG_FF[0] == 1 & GEN_TRIG_FF[1] == 0);
 //wire TRIG_PULSE = (GEN_TRIG_FF[0] == 0 & GEN_TRIG == 1);
 assign GEN_TRIG_PULSE =  TRIG_PULSE & (&READY);
 
-reg [10:0] GEN_CDC_FIFO_FF;  /// in tlu_ch_rx VALID goes F when realtive_le > 16*15 ...
-wire GEN_CDC_FIFO_PULSE;
-always@(posedge CLK40)
-        GEN_CDC_FIFO_FF <= {GEN_CDC_FIFO_FF[10:0], GEN_TRIG_PULSE};
-assign GEN_CDC_FIFO_PULSE= (GEN_CDC_FIFO_FF[9] == 1 & GEN_CDC_FIFO_FF[10] == 0);
-
-
 wire SKIP_TRIGGER = TRIG_PULSE & !GEN_TRIG_PULSE;
 
 always@(posedge CLK40)
     if(RST_SYNC | START_SYNC)
         SKIP_TRIG_COUNTER <= 0;
-    else if(SKIP_TRIGGER)   // & SKIP_TRIG_COUNTER!=32'hffffffff ) //maybe allow overflow..
+    else if(SKIP_TRIGGER)  // let overflow.. & SKIP_TRIG_COUNTER!=32'hffffffff )
         SKIP_TRIG_COUNTER <= SKIP_TRIG_COUNTER + 1;
 
 
@@ -294,7 +291,8 @@ for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
             .SYS_RST(RST_SYNC), 
             .ENABLE(CONF_EN_OUTPUT[dut_ch]), 
             .TRIG(GEN_TRIG_PULSE),
-            .TRIG_ID(TRIG_ID_FF[14:0]),
+            .TRIG_ID(TRIG_ID_FF[30:0]),
+			   .N_BITS_TRIGGER_ID(CONF_N_BITS_TRIGGER_ID),
             .READY(READY[dut_ch]),
             .CONF_TIME_OUT(CONF_TIME_OUT),
             .TIME_OUT(TIME_OUT[dut_ch]),
@@ -325,15 +323,14 @@ end
 
 wire [7:0] LE [3:0];
 // calculate relative distance of LE of input signals to LE of TRIG_PULSE (generation of trigger signal), fixed offset is needed for correct relative distance
-//assign LE[0] = VALID[0] ? LAST_RISING_REL[0] + 16'd43 : 0;
-assign LE[0] = VALID[0] ? LAST_RISING_REL[0][7:0] : 0;
-assign LE[1] = VALID[1] ? LAST_RISING_REL[1][7:0] : 0;
-assign LE[2] = VALID[2] ? LAST_RISING_REL[2][7:0] : 0;
-assign LE[3] = VALID[3] ? LAST_RISING_REL[3][7:0] : 0;
+assign LE[0] = CONF_EN_INPUT[0] ? LAST_RISING_REL[0] + 8'd43 : 0;
+assign LE[1] = CONF_EN_INPUT[1] ? LAST_RISING_REL[1] + 8'd43 : 0;
+assign LE[2] = CONF_EN_INPUT[2] ? LAST_RISING_REL[2] + 8'd43 : 0;
+assign LE[3] = CONF_EN_INPUT[3] ? LAST_RISING_REL[3] + 8'd43 : 0;
 
 ///TODO: add some status? Lost count? Skipped triggers?
 assign cdc_data = {TRIG_ID, TIME_STAMP, LE[3], LE[2], LE[1], LE[0]};
-assign cdc_fifo_write = GEN_CDC_FIFO_PULSE;
+assign cdc_fifo_write = GEN_TRIG_PULSE;
 
 wire [127:0] cdc_data_out;
 cdc_syncfifo #(.DSIZE(128), .ASIZE(3)) cdc_syncfifo
