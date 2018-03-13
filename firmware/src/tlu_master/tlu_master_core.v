@@ -34,7 +34,7 @@ module tlu_master_core
     
 );
 
-localparam VERSION = 1;
+localparam VERSION = 2;
 
 wire SOFT_RST, START;
 assign SOFT_RST = (BUS_ADD==0 && BUS_WR); 

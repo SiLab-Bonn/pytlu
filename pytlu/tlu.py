@@ -166,8 +166,10 @@ class Tlu(Dut):
             #    for i in range(8):
             #        print i,retint[i]
             return retint
+            # return ret
         else:
             return np.array([], dtype=self.data_dtype)
+            #return np.empty([], dtype=np.uint8)
 
     @contextmanager
     def readout(self, *args, **kwargs):
@@ -383,7 +385,7 @@ def main():
                 elif time_1-start_time < 30:
                     time.sleep(1)
                 else:
-                    time.sleep(10)
+                    time.sleep(5)
             except KeyboardInterrupt:
                 break
         chip['tlu_master'].EN_INPUT = 0
