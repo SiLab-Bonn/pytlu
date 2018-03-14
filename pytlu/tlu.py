@@ -10,6 +10,7 @@ import basil
 from basil.dut import Dut
 import logging
 import os
+import sys
 import time
 import argparse
 import signal
@@ -22,7 +23,7 @@ from contextlib import contextmanager
 signal.signal(signal.SIGINT, signal.default_int_handler)
 root_logger=logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
-root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
+root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
 
 
 class Tlu(Dut):
@@ -40,9 +41,8 @@ class Tlu(Dut):
         if conf is None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
 
-        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),('le3', 'u1'), 
-        #self.data_dtype = np.dtype([('le0', 'u2'), ('le2', 'u2'),
-                                    ('time_stamp', 'u8'), ('trigger_id', 'u4')])
+        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
+                                    ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
         self.meta_data_dtype = np.dtype([('index_start', 'u4'), ('index_stop', 'u4'), ('data_length', 'u4'),
                                          ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4')])
 
@@ -71,8 +71,8 @@ class Tlu(Dut):
         if (monitor_addr==None): 
             self.socket=None
         else:
+            self.sender=__import__('pytlu.online_monitor.sender')
             try:
-                self.sender = __import__('pytlu.online_monitor.sender')
                 self.socket = self.sender.init(monitor_addr)
                 self.logger.info('Inintialiying online_monitor: connected=%s'%monitor_addr)
             except:
@@ -152,21 +152,8 @@ class Tlu(Dut):
             how_much_read = (stream_fifo_size / 512 + 1) * 512
             self['stream_fifo'].SET_COUNT = how_much_read
             ret = self['intf'].read(0x0001000000000000, how_much_read)
-        #if len(ret) >= 16:
             retint = np.frombuffer(ret, dtype=self.data_dtype)
-            #retint = np.frombuffer(self.ret[:(len(self.ret)//16)*16], dtype=self.data_dtype)
-            #print len(retint),
             retint = retint[retint['time_stamp'] > 0]
-            #print len(retint),
-            if len(ret)>=16:
-            #    print type(ret)
-                for i in range(16):
-                    print hex(ret[i]),
-                print len(retint),len(ret)//16, retint[0]
-            #self.ret=self.ret[(len(self.ret)//16)*16:]
-            #print len(self.ret)
-            #    for i in range(8):
-            #        print i,retint[i]
             return retint
             # return ret
         else:
@@ -197,6 +184,10 @@ class Tlu(Dut):
         self.meta_data_table.attrs.config=yaml.dump(self.get_configuration())
 
     def close(self):
+        try:
+            self.h5_file.close()
+        except:
+            pass
         ### close socket
         if self.socket!=None:
            try:
@@ -234,7 +225,7 @@ class Tlu(Dut):
             try:
                 self.sender.send_data(self.socket,data_tuple)
             except:
-                self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
+                self.logger.warn('online_monitor.sender.send_data failed %s'%str(sys.exc_info()))
                 try:
                     self.sender.close(self.socket)
                 except:
