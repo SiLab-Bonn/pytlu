@@ -84,7 +84,7 @@ always @(posedge BUS_CLK) begin
         status_regs[6] <= 8'b0;
         status_regs[7] <= 8'hff; //TIMEOUT
         status_regs[8] <= 8'hff;
-		  status_regs[9] <= 8'b0; //N_BITS_TRIGGER_ID
+		  status_regs[9] <= 8'd15; //N_BITS_TRIGGER_ID default is 15 
     end
     else if(BUS_WR && BUS_ADD < 10)
         status_regs[BUS_ADD[3:0]] <= BUS_DATA_IN;

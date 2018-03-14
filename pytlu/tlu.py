@@ -10,6 +10,7 @@ import basil
 from basil.dut import Dut
 import logging
 import os
+import sys
 import time
 import argparse
 import signal
@@ -22,7 +23,7 @@ from contextlib import contextmanager
 signal.signal(signal.SIGINT, signal.default_int_handler)
 root_logger=logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
-root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
+root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
 
 
 class Tlu(Dut):
@@ -40,8 +41,8 @@ class Tlu(Dut):
         if conf is None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
 
-        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),('le3', 'u1'), 
-                                    ('time_stamp', 'u8'), ('trigger_id', 'u4')])
+        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
+                                    ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
         self.meta_data_dtype = np.dtype([('index_start', 'u4'), ('index_stop', 'u4'), ('data_length', 'u4'),
                                          ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4')])
 
@@ -70,8 +71,8 @@ class Tlu(Dut):
         if (monitor_addr==None): 
             self.socket=None
         else:
+            self.sender = __import__('pytlu.online_monitor.sender')
             try:
-                self.sender = __import__('pytlu.online_monitor.sender')
                 self.socket = self.sender.init(monitor_addr)
                 self.logger.info('Inintialiying online_monitor: connected=%s'%monitor_addr)
             except:
@@ -193,9 +194,7 @@ class Tlu(Dut):
                self.sender.close(self.socket)
            except:
                pass
-        
-        super(Tlu, self).close()
-        
+
     def handle_data(self, data_tuple):
         '''Handling of the data.
         '''
@@ -221,15 +220,15 @@ class Tlu(Dut):
 
         ##### sending data to online monitor
         if self.socket!=None:
-            #try:
+            try:
                 self.sender.send_data(self.socket,data_tuple)
-            #except:
-            #    self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
-            #    try:
-            #        self.sender.close(self.socket)
-            #    except:
-            #        pass
-            #    self.socket=None
+            except:
+                self.logger.warn('online_monitor.sender.send_data failed %s'%str(sys.exc_info()))
+                try:
+                    self.sender.close(self.socket)
+                except:
+                    pass
+                self.socket=None
 
     def handle_err(self, exc):
         pass
