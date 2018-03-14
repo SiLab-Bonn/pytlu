@@ -10,6 +10,7 @@ import basil
 from basil.dut import Dut
 import logging
 import os
+import sys
 import time
 import argparse
 import signal
@@ -22,7 +23,7 @@ from contextlib import contextmanager
 signal.signal(signal.SIGINT, signal.default_int_handler)
 root_logger=logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
-root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
+root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
 
 
 class Tlu(Dut):
@@ -40,8 +41,8 @@ class Tlu(Dut):
         if conf is None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
 
-        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),('le3', 'u1'), 
-                                    ('time_stamp', 'u8'), ('trigger_id', 'u4')])
+        self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
+                                    ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
         self.meta_data_dtype = np.dtype([('index_start', 'u4'), ('index_stop', 'u4'), ('data_length', 'u4'),
                                          ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4')])
 
@@ -70,9 +71,9 @@ class Tlu(Dut):
         if (monitor_addr==None): 
             self.socket=None
         else:
-            import pytlu.online_monitor.sender as sender
+            self.sender=__import__('pytlu.online_monitor.sender')
             try:
-                self.socket = sender.init(monitor_addr)
+                self.socket = self.sender.init(monitor_addr)
                 self.logger.info('Inintialiying online_monitor: connected=%s'%monitor_addr)
             except:
                 self.logger.warn('Inintialiying online_monitor: failed addr=%s'%monitor_addr)
@@ -190,7 +191,7 @@ class Tlu(Dut):
         ### close socket
         if self.socket!=None:
            try:
-               sender.close(self.socket)
+               self.sender.close(self.socket)
            except:
                pass
 
@@ -219,15 +220,15 @@ class Tlu(Dut):
 
         ##### sending data to online monitor
         if self.socket!=None:
-            #try:
-                sender.send_data(self.socket,data_tuple)
-            #except:
-            #    self.logger.warn('ScanBase.hadle_data:sender.send_data failed')
-            #    try:
-            #        sender.close(self.socket)
-            #    except:
-            #        pass
-            #    self.socket=None
+            try:
+                self.sender.send_data(self.socket,data_tuple)
+            except:
+                self.logger.warn('online_monitor.sender.send_data failed %s'%str(sys.exc_info()))
+                try:
+                    self.sender.close(self.socket)
+                except:
+                    pass
+                self.socket=None
 
     def handle_err(self, exc):
         pass
@@ -252,6 +253,8 @@ def main():
                         help='Enable ouput channels. CHx and LEM0x are exclusive. Allowed values are ' + ', '.join(output_ch), metavar='CHx/LEMOx')
     parser.add_argument('-th', '--threshold', type=th_type, default=0,
                         help="Digital threshold for input (in units of 1.5625ns). Default=0", metavar='0...31')
+    parser.add_argument('-b', '--n_bits', type=th_type, default=16,
+                        help="Number of bits for trigger ID. Should correspond to TLU_TRIGGER_MAX_CLOCK_CYCLES - 1 which is set for TLU module. Default=0", metavar='0...31')
     parser.add_argument('-ds', '--distance', type=th_type, default=31,
                         help="Maximum distance between inputs rise time (in units of 1.5625ns). Default=31, 0=disabled", metavar='0...31')
     parser.add_argument('-t', '--test', type=int,
@@ -300,6 +303,7 @@ def main():
     chip['tlu_master'].MAX_DISTANCE = args.distance
     chip['tlu_master'].THRESHOLD = args.threshold
     chip['tlu_master'].TIMEOUT = args.timeout
+    chip['tlu_master'].N_BITS_TRIGGER_ID = args.n_bits
 
     in_en = 0
     for ie in args.input_enable:
