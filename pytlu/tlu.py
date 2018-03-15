@@ -246,8 +246,8 @@ def main():
             raise argparse.ArgumentTypeError("Threshold is 0 to 31")
         return int(x)
 
-    parser = argparse.ArgumentParser(
-        description='TLU DAQ \n example: sitlu -ie CH0 -oe CH0', formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(usage="pytlu -ie CH0 -oe CH0",
+        description='TLU DAQ\n TX_STATE: 0= DISABLED 1=WAIT 2=TRIGGERED (wait for busy HIGH) 4=READ_TRIG (wait for busy LOW) LBS is CH0', formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
                         help='Enable input channels. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
@@ -327,9 +327,9 @@ def main():
             freq=0
         if freq_all==None:
             freq_all=0
-        logging.info("Time: %.2f TriggerId: %8d Skip: %8d Timeout: %2d Av. Rate: %.2f Hz (%.2fHz)" % (time.time() - start_time,
+        logging.info("Trigger:%8d Skip:%8d Timeout:%2d Rate:%.2f(%.2f)Hz TxState:%06x" % (
                       chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
-                      freq,freq_all))
+                      freq,freq_all,chip['tlu_master'].TX_STATE))
 
 
     start_time = time.time()
@@ -352,8 +352,8 @@ def main():
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
                 freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
                 print_log(freq=freq,freq_all=freq_all)
-                time_2 = time.time()
-                trigger_id_2 = chip['tlu_master'].TRIGGER_ID
+                time_2 = time_1
+                trigger_id_2 = trigger_id_1
                 skip2=skip1
                 time.sleep(1)
             print_log()
@@ -368,12 +368,14 @@ def main():
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
                 skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
+
                 freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
                 print_log(freq=freq,freq_all=freq_all)
-                time_2 = time.time()
-                trigger_id_2 = chip['tlu_master'].TRIGGER_ID
+                time_2 = time_1
+                trigger_id_2 = trigger_id_1
                 skip2=skip1
-                if time_1-start_time+10 > args.scan_time and args.scan_time>0: 
+                if time_1-start_time+10 > args.scan_time and args.scan_time>0:
+                    time.sleep(args.scan_time-time.time()+start_time)    
                     break
                 elif time_1-start_time < 30:
                     time.sleep(1)
@@ -383,8 +385,7 @@ def main():
                 break
         chip['tlu_master'].EN_INPUT = 0
         chip['tlu_master'].EN_OUTPUT = 0
-        if args.scan_time >0:
-            time.sleep(args.scan_time-time.time()+start_time)      
+  
         print_log()
     chip.close()
 
