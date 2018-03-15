@@ -32,6 +32,7 @@ class tlu_master(RegisterHardwareLayer):
                  'SKIP_TRIG_COUNTER': {'descr': {'addr': 28, 'size': 32, 'properties': ['ro']}},
                  'TIMEOUT_COUNTER': {'descr': {'addr': 32, 'size': 8, 'properties': ['ro']}},
                  'LOST_DATA_CNT': {'descr': {'addr': 33, 'size': 8, 'properties': ['ro']}},
+                 'TX_STATE': {'descr': {'addr': 34, 'size': 24, 'properties': ['ro']}},
 
                   }
     
