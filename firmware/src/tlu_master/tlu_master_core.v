@@ -64,6 +64,8 @@ reg [7:0] TIMEOUT_COUNTER;
 
 wire [15:0] CONF_TIME_OUT;
 assign CONF_TIME_OUT = {status_regs[8], status_regs[7]};
+
+wire [2:0] TX_STATE[5:0];
     
 reg [63:0] TIME_STAMP;
 reg [31:0] TRIG_ID;
@@ -84,7 +86,7 @@ always @(posedge BUS_CLK) begin
         status_regs[6] <= 8'b0;
         status_regs[7] <= 8'hff; //TIMEOUT
         status_regs[8] <= 8'hff;
-		  status_regs[9] <= 8'd15; //N_BITS_TRIGGER_ID default is 15 
+		  status_regs[9] <= 8'd15; //N_BITS_TRIGGER_ID default is 15
     end
     else if(BUS_WR && BUS_ADD < 10)
         status_regs[BUS_ADD[3:0]] <= BUS_DATA_IN;
@@ -149,6 +151,12 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= TIMEOUT_COUNTER;
         else if(BUS_ADD == 33)
             BUS_DATA_OUT <= LOST_DATA_CNT;
+        else if(BUS_ADD == 34)
+            BUS_DATA_OUT <= {1'b0,TX_STATE[1],1'b0,TX_STATE[0]};
+        else if(BUS_ADD == 35)
+            BUS_DATA_OUT <= {1'b0,TX_STATE[3],1'b0,TX_STATE[2]};
+        else if(BUS_ADD == 36)
+            BUS_DATA_OUT <= {1'b0,TX_STATE[5],1'b0,TX_STATE[4]};
         else
             BUS_DATA_OUT <= 0;
     end
@@ -296,6 +304,7 @@ for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
             .READY(READY[dut_ch]),
             .CONF_TIME_OUT(CONF_TIME_OUT),
             .TIME_OUT(TIME_OUT[dut_ch]),
+				.STATE_OUT(TX_STATE[dut_ch]),
             
             .TLU_CLOCK(DUT_CLOCK[dut_ch]), .TLU_BUSY(DUT_BUSY[dut_ch]),
             .TLU_TRIGGER(DUT_TRIGGER[dut_ch]), .TLU_RESET(DUT_RESET[dut_ch])
