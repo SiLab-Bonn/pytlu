@@ -26,7 +26,7 @@ setup(
         ]
     },
     install_requires=[
-          'basil_daq == 2.4.10',
+          'basil_daq >= 2.4.10',
           'tables'
     ],
     platforms='any'
