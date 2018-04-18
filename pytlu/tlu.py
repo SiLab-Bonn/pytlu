@@ -34,7 +34,7 @@ class Tlu(Dut):
     PCA9555 = {'DIR': 6, 'OUT': 2}
     IP_SEL = {'RJ45': 0b11, 'LEMO': 0b10}
 
-    def __init__(self, conf=None, log_file=None, data_file=None, monitor_addr=None):
+    def __init__(self, conf=None, output_folder=None, log_file=None, data_file=None, monitor_addr=None):
 
         cnfg = conf
         logging.info("Loading configuration file from %s" % conf)
@@ -50,9 +50,25 @@ class Tlu(Dut):
         self.output_filename = self.run_name
         self._first_read = False
 
-        self.log_file = self.output_filename + '.log'
+        if output_folder:
+            self.output_folder = output_folder
+        else:
+            self.output_folder = os.path.dirname(os.path.abspath(__file__))
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
+
         if log_file:
-            self.log_file = log_file
+            self.log_file = os.path.join(self.output_folder, log_file + ".log")
+        else:
+            self.log_file = os.path.join(self.output_folder, self.output_filename + ".log")
+
+        if data_file:
+            self.data_file = os.path.join(self.output_folder, data_file + ".h5")
+        else:
+            self.data_file = os.path.join(self.output_folder, self.output_filename + ".h5")
+
+        logging.info('Log file name: %s', self.log_file)
+        logging.info('Data file name: %s', self.data_file)
 
         self.fh = logging.FileHandler(self.log_file)
         self.fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s"))
@@ -61,15 +77,9 @@ class Tlu(Dut):
         self.logger.addHandler(self.fh)
         logging.info('Initializing %s', self.__class__.__name__)
 
-        self.data_file = self.output_filename + '.h5'
-        if data_file:
-            self.data_file = data_file
-
-        logging.info('Data file name: %s', self.data_file)
-
-        ### open socket for monitor
-        if (monitor_addr==None): 
-            self.socket=None
+        # open socket for monitor
+        if monitor_addr is None:
+            self.socket = None
         else:
             self.sender=__import__('pytlu.online_monitor.sender')
             try:
@@ -268,6 +278,8 @@ def main():
                         help="Timeout to wait for DUT. Default=65535, 0=disabled", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
+    parser.add_argument('-f', '--output_folder',  type=str,
+                        default=None, help='Output folder of data and log file.  Default: /pytlu/output_data')
     parser.add_argument('-l', '--log',  type=str,
                         default=None, help='Name of log file')
     parser.add_argument('-d', '--data',  type=str,
@@ -279,7 +291,7 @@ def main():
 
     args = parser.parse_args()
 
-    chip = Tlu(log_file=args.log, data_file=args.data,monitor_addr=args.monitor_addr)
+    chip = Tlu(output_folder=args.output_folder, log_file=args.log, data_file=args.data, monitor_addr=args.monitor_addr)
     chip.init()
 
     ch_no = [int(x[-1]) for x in args.output_enable]
