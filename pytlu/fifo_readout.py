@@ -265,10 +265,12 @@ class FifoReadout(object):
         if fifo_size != 0:
             logging.warning('SRAM FIFO not empty after reset: size = %i', fifo_size)
 
-
     def get_data_tlu_fifo_lost_count(self, channels=None):
         return self.dut['tlu_master'].LOST_DATA_CNT
-        
+
+    def get_data_tlu_skipped_trigger_count(self, channels=None):
+        return self.dut['tlu_master'].SKIP_TRIG_COUNTER
+
     def get_float_time(self):
         '''returns time as double precision floats - Time64 in pytables - mapping to and from python datetime's
 
