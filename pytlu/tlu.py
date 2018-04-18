@@ -213,6 +213,7 @@ class Tlu(Dut):
         self.meta_data_table.row['error'] = data_tuple[3]
         self.meta_data_table.row['data_length'] = len_raw_data
         self.meta_data_table.row['index_start'] = total_words
+        self.meta_data_table.row['skipped_triggers'] = self.fifo_readout.get_data_tlu_skipped_trigger_count()
         total_words += len_raw_data
         self.meta_data_table.row['index_stop'] = total_words
         self.meta_data_table.row.append()
