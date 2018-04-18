@@ -82,13 +82,13 @@ class Tlu(Dut):
         if monitor_addr is None:
             self.socket = None
         else:
-            self.sender=__import__('pytlu.online_monitor.sender')
+            self.sender = __import__('pytlu.online_monitor.sender')
             try:
                 self.socket = self.sender.init(monitor_addr)
-                self.logger.info('Inintialiying online_monitor: connected=%s'%monitor_addr)
+                self.logger.info('Inintialiying online_monitor: connected=%s' % monitor_addr)
             except:
-                self.logger.warn('Inintialiying online_monitor: failed addr=%s'%monitor_addr)
-                self.socket=None
+                self.logger.warn('Inintialiying online_monitor: failed addr=%s' % monitor_addr)
+                self.socket = None
 
         super(Tlu, self).__init__(conf)
 
@@ -169,7 +169,7 @@ class Tlu(Dut):
             # return ret
         else:
             return np.array([], dtype=self.data_dtype)
-            #return np.empty([], dtype=np.uint8)
+            # return np.empty([], dtype=np.uint8)
 
     @contextmanager
     def readout(self, *args, **kwargs):
@@ -192,19 +192,19 @@ class Tlu(Dut):
         yield
         self.fifo_readout.stop()
         self.fifo_readout.print_readout_status()
-        self.meta_data_table.attrs.config=yaml.dump(self.get_configuration())
+        self.meta_data_table.attrs.config = yaml.dump(self.get_configuration())
 
     def close(self):
         try:
             self.h5_file.close()
         except:
             pass
-        ### close socket
-        if self.socket!=None:
-           try:
-               self.sender.close(self.socket)
-           except:
-               pass
+        # close socket
+        if self.socket is not None:
+            try:
+                self.sender.close(self.socket)
+            except:
+                pass
         super(Tlu, self).close()
 
     def handle_data(self, data_tuple):
@@ -213,7 +213,7 @@ class Tlu(Dut):
 
         total_words = self.data_table.nrows
 
-        #print data_tuple[0]
+        # print data_tuple[0]
 
         self.data_table.append(data_tuple[0])
         self.data_table.flush()
@@ -229,19 +229,18 @@ class Tlu(Dut):
         self.meta_data_table.row['index_stop'] = total_words
         self.meta_data_table.row.append()
         self.meta_data_table.flush()
-        
 
-        ##### sending data to online monitor
-        if self.socket!=None:
+        # sending data to online monitor
+        if self.socket is not None:
             try:
-                self.sender.send_data(self.socket,data_tuple)
+                self.sender.send_data(self.socket, data_tuple)
             except:
-                self.logger.warn('online_monitor.sender.send_data failed %s'%str(sys.exc_info()))
+                self.logger.warn('online_monitor.sender.send_data failed %s' % str(sys.exc_info()))
                 try:
                     self.sender.close(self.socket)
                 except:
                     pass
-                self.socket=None
+                self.socket = None
 
     def handle_err(self, exc):
         pass
@@ -258,7 +257,7 @@ def main():
         return int(x)
 
     parser = argparse.ArgumentParser(usage="pytlu -ie CH0 -oe CH0",
-        description='TLU DAQ\n TX_STATE: 0= DISABLED 1=WAIT 2=TRIGGERED (wait for busy HIGH) 4=READ_TRIG (wait for busy LOW) LBS is CH0', formatter_class=argparse.RawTextHelpFormatter)
+                                     description='TLU DAQ\n TX_STATE: 0= DISABLED 1=WAIT 2=TRIGGERED (wait for busy HIGH) 4=READ_TRIG (wait for busy LOW) LBS is CH0', formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
                         help='Enable input channels. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
@@ -275,7 +274,7 @@ def main():
     parser.add_argument('-c', '--count', type=int, default=0,
                         help="Number of generated triggers. 0=infinite (default) ", metavar='0...n')
     parser.add_argument('--timeout', type=int, default=0xffff,
-                        help="Timeout to wait for DUT. Default=65535, 0=disabled", metavar='0...65535')
+                        help="Timeout to wait for DUT. Default=65535, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
     parser.add_argument('-f', '--output_folder',  type=str,
@@ -335,15 +334,14 @@ def main():
         in_inv = in_inv | (0x01 << int(ie[-1]))
     chip['tlu_master'].INVERT_INPUT = in_inv
 
-    def print_log(freq=None,freq_all=None):
-        if freq== None:
-            freq=0
-        if freq_all==None:
-            freq_all=0
+    def print_log(freq=None, freq_all=None):
+        if freq is None:
+            freq = 0
+        if freq_all is None:
+            freq_all = 0
         logging.info("Trigger:%8d Skip:%8d Timeout:%2d Rate:%.2f(%.2f)Hz TxState:%06x" % (
-                      chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
-                      freq,freq_all,chip['tlu_master'].TX_STATE))
-
+            chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
+            freq, freq_all, chip['tlu_master'].TX_STATE))
 
     start_time = time.time()
     time_2 = 0
@@ -363,16 +361,16 @@ def main():
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
                 skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
-                freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
-                print_log(freq=freq,freq_all=freq_all)
+                freq_all = freq + np.uint32(skip1 - skip2) / (time_1 - time_2)
+                print_log(freq=freq, freq_all=freq_all)
                 time_2 = time_1
                 trigger_id_2 = trigger_id_1
-                skip2=skip1
+                skip2 = skip1
                 time.sleep(1)
             print_log()
         return
 
-    logging.info("Starting ... Ctrl+C to exit scan_time=%ds"%args.scan_time)
+    logging.info("Starting ... Ctrl+C to exit scan_time=%ds" % args.scan_time)
     with chip.readout():
         chip['tlu_master'].EN_INPUT = in_en
         while True:
@@ -382,13 +380,13 @@ def main():
                 skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
 
-                freq_all = freq+ np.uint32(skip1 - skip2) / (time_1 - time_2)
-                print_log(freq=freq,freq_all=freq_all)
+                freq_all = freq + np.uint32(skip1 - skip2) / (time_1 - time_2)
+                print_log(freq=freq, freq_all=freq_all)
                 time_2 = time_1
                 trigger_id_2 = trigger_id_1
-                skip2=skip1
-                if time_1-start_time+10 > args.scan_time and args.scan_time>0:
-                    time.sleep(args.scan_time-time.time()+start_time)    
+                skip2 = skip1
+                if time_1 - start_time + 10 > args.scan_time and args.scan_time > 0:
+                    time.sleep(args.scan_time - time.time() + start_time)
                     break
                 elif time_1-start_time < 30:
                     time.sleep(1)
@@ -398,9 +396,10 @@ def main():
                 break
         chip['tlu_master'].EN_INPUT = 0
         chip['tlu_master'].EN_OUTPUT = 0
-  
+
         print_log()
     chip.close()
+
 
 if __name__ == '__main__':
     main()
