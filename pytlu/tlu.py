@@ -273,8 +273,8 @@ def main():
                         help="Generate triggers with given distance (in units of 25 ns).", metavar='1...n')
     parser.add_argument('-c', '--count', type=int, default=0,
                         help="Number of generated triggers. 0=infinite (default) ", metavar='0...n')
-    parser.add_argument('--timeout', type=int, default=0xffff,
-                        help="Timeout to wait for DUT. Default=65535, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
+    parser.add_argument('--timeout', type=int, default=0x0000,
+                        help="Timeout to wait for DUT. Default=0, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
     parser.add_argument('-f', '--output_folder',  type=str,
