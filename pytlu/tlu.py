@@ -44,7 +44,8 @@ class Tlu(Dut):
         self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
                                     ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
         self.meta_data_dtype = np.dtype([('index_start', 'u4'), ('index_stop', 'u4'), ('data_length', 'u4'),
-                                         ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4')])
+                                         ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4'),
+                                         ('skipped_triggers', 'u8')])
 
         self.run_name = time.strftime("tlu_%Y%m%d_%H%M%S")
         self.output_filename = self.run_name
