@@ -178,10 +178,11 @@ class FifoReadout(object):
                 if data_words > 0:
                     last_time, curr_time = self.update_timestamp()
                     status = 0
+                    skip_triggers = self.get_data_tlu_skipped_trigger_count()
                     if self.callback:
-                        self._data_deque.append((data, last_time, curr_time, status))
+                        self._data_deque.append((data, last_time, curr_time, status, skip_triggers))
                     if self.fill_buffer:
-                        self._data_buffer.append((data, last_time, curr_time, status))
+                        self._data_buffer.append((data, last_time, curr_time, status, skip_triggers))
                     self._words_per_read.append(data_words)
                 elif self.stop_readout.is_set():
                     break
@@ -268,7 +269,7 @@ class FifoReadout(object):
     def get_data_tlu_fifo_lost_count(self, channels=None):
         return self.dut['tlu_master'].LOST_DATA_CNT
 
-    def get_data_tlu_skipped_trigger_count(self, channels=None):
+    def get_data_tlu_skipped_trigger_count(self):
         return self.dut['tlu_master'].SKIP_TRIG_COUNTER
 
     def get_float_time(self):
