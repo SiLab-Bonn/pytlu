@@ -54,7 +54,7 @@ class Tlu(Dut):
         if output_folder:
             self.output_folder = output_folder
         else:
-            self.output_folder = os.path.dirname(os.path.abspath(__file__))
+            self.output_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output_data')
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
 
