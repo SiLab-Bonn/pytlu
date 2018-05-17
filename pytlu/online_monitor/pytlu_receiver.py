@@ -1,0 +1,97 @@
+import time
+import pyqtgraph as pg
+
+from PyQt5 import Qt
+from pyqtgraph.Qt import QtCore, QtGui
+from pyqtgraph.dockarea import DockArea, Dock
+import pyqtgraph.ptime as ptime
+
+from online_monitor.utils import utils
+from online_monitor.receiver.receiver import Receiver
+from zmq.utils import jsonapi
+
+
+class PyTLU(Receiver):
+
+    def setup_receiver(self):
+        self.set_bidirectional_communication()  # We want to change converter settings
+
+    def setup_widgets(self, parent, name):
+        dock_area = DockArea()
+        parent.addTab(dock_area, name)
+        # Docks
+        dock_rate = Dock("Particle rate (Trigger rate)", size=(400, 400))
+        dock_status = Dock("Status", size=(800, 40))
+        dock_area.addDock(dock_rate, 'above')
+        dock_area.addDock(dock_status, 'top')
+
+        # Status dock on top
+        cw = QtGui.QWidget()
+        cw.setStyleSheet("QWidget {background-color:white}")
+        layout = QtGui.QGridLayout()
+        cw.setLayout(layout)
+        self.rate_label = QtGui.QLabel("Readout Rate\n0 Hz")
+        self.timestamp_label = QtGui.QLabel("Data Timestamp\n")
+        self.plot_delay_label = QtGui.QLabel("Plot Delay\n")
+        self.spin_box = Qt.QSpinBox(value=0)
+        self.spin_box.setMaximum(1000000)
+        self.spin_box.setSuffix(" Readouts")
+        self.reset_button = QtGui.QPushButton('Reset')
+        layout.addWidget(self.timestamp_label, 0, 0, 0, 1)
+        layout.addWidget(self.plot_delay_label, 0, 1, 0, 1)
+        layout.addWidget(self.rate_label, 0, 2, 0, 1)
+        layout.addWidget(self.spin_box, 0, 6, 0, 1)
+        layout.addWidget(self.reset_button, 0, 7, 0, 1)
+        dock_status.addWidget(cw)
+
+        # Connect widgets
+        self.reset_button.clicked.connect(lambda: self.send_command('RESET'))
+        self.spin_box.valueChanged.connect(lambda value: self.send_command(str(value)))
+
+        # particle rate dock
+        trigger_rate_graphics = pg.GraphicsLayoutWidget()
+        trigger_rate_graphics.show()
+        plot_trigger_rate = pg.PlotItem(labels={'left': 'Trigger Rate / kHz', 'bottom': 'Time / s'})
+        self.trigger_rate_curve = pg.PlotCurveItem(pen='r')
+
+        # add items to plots and customize plots viewboxes
+        plot_trigger_rate.addItem(self.trigger_rate_curve)
+        plot_trigger_rate.vb.setBackgroundColor('#545454')
+        # plot_trigger_rate.setYRange(7,9,padding=0)
+        plot_trigger_rate.setXRange(-60, 0)
+        plot_trigger_rate.getAxis('left').setZValue(0)
+        plot_trigger_rate.getAxis('left').setGrid(155)
+
+        # add plots to graphicslayout and layout to dock
+        trigger_rate_graphics.addItem(plot_trigger_rate, row=0, col=1, rowspan=1, colspan=2)
+        dock_rate.addWidget(trigger_rate_graphics)
+
+        # add dict of all used plotcurveitems for individual handling of each plot
+        self.plots = {'trigger_rate': self.trigger_rate_curve}
+        self.plot_delay = 0
+
+    def deserialze_data(self, data):
+        return jsonapi.loads(data, object_hook=utils.json_numpy_obj_hook)
+
+    def handle_data(self, data):
+        # look for TLU data in data stream
+        if 'tlu' in data:
+            # fill plots
+            for key in data['tlu']:
+                # if array not full, plot data only up to current array_index, 'indices' is keyword
+                if data['indices'][key] < data['tlu'][key].shape[1]:
+                    # set the plot data to the corresponding arrays where only the the values up to self.array_index are plotted
+                    self.plots[key].setData(data['tlu'][key][0][:data['indices'][key]],
+                                            data['tlu'][key][1][:data['indices'][key]], autoDownsample=True)
+
+                # if array full, plot entire array
+                elif data['indices'][key] >= data['tlu'][key].shape[1]:
+                    # set the plot data to the corresponding arrays
+                    self.plots[key].setData(data['tlu'][key][0], data['tlu'][key][1], autoDownsample=True)
+
+        # set timestamp, plot delay and readour rate
+        self.rate_label.setText("Readout Rate\n%d Hz" % data['fps'])
+        self.timestamp_label.setText("Data Timestamp\n%s" % time.asctime(time.localtime(data['timestamp_stop'])))
+        now = ptime.time()
+        self.plot_delay = self.plot_delay * 0.9 + (now - data['timestamp_stop']) * 0.1
+        self.plot_delay_label.setText("Plot Delay\n%s" % 'not realtime' if abs(self.plot_delay) > 5 else "%1.2f ms" % (self.plot_delay * 1.e3))

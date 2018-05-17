@@ -1,0 +1,10 @@
+converter :
+    TLU_Converter :
+        kind : pytlu_converter
+        frontend : tcp://127.0.0.1:8600
+        backend : tcp://127.0.0.1:8700
+
+receiver :
+    TLU :
+        kind : pytlu_receiver
+        frontend : tcp://127.0.0.1:8700
