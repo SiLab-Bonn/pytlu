@@ -1,13 +1,6 @@
 import logging
-import glob
-from threading import RLock
-import os.path
-from os import remove
-from operator import itemgetter
-
-import tables as tb
-
 import zmq
+
 
 def init(socket_address="tcp://127.0.0.1:5500"):
     logging.info('Creating ZMQ context')
@@ -15,10 +8,12 @@ def init(socket_address="tcp://127.0.0.1:5500"):
     logging.info('Creating socket connection to server %s', socket_address)
     socket = context.socket(zmq.PUB)  # publisher socket
     socket.bind(socket_address)
-    send_meta_data(socket, None, name='Reset')  # send reset to indicate a new scan
+    # send reset to indicate a new scan
+    send_meta_data(socket, None, name='Reset')
     return socket
 
-def send_meta_data(socket,conf, name):
+
+def send_meta_data(socket, conf, name):
     '''Sends the config via ZeroMQ to a specified socket. Is called at the beginning of a run and when the config changes. Conf can be any config dictionary.
     '''
     meta_data = dict(
@@ -30,7 +25,8 @@ def send_meta_data(socket,conf, name):
     except zmq.Again:
         pass
 
-def send_data(socket, data, scan_parameters={}, name='ReadoutData'):
+
+def send_data(socket, data, len_raw_data, scan_parameters={}, name='ReadoutData'):
     '''Sends the data of every read out (raw data and meta data) via ZeroMQ to a specified socket
     '''
     if not scan_parameters:
@@ -47,11 +43,13 @@ def send_data(socket, data, scan_parameters={}, name='ReadoutData'):
     )
     try:
         socket.send_json(data_meta_data, flags=zmq.SNDMORE | zmq.NOBLOCK)
-        socket.send(data[0], flags=zmq.NOBLOCK)  # PyZMQ supports sending numpy arrays without copying any data
+        # PyZMQ supports sending numpy arrays without copying any data
+        socket.send(data[0], flags=zmq.NOBLOCK)
     except zmq.Again:
         pass
 
+
 def close(socket):
-    if socket!=None:
+    if socket is not None:
         logging.info('Closing socket connection')
         socket.close()  # close here, do not wait for garbage collector
