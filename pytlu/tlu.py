@@ -20,7 +20,7 @@ import numpy as np
 from fifo_readout import FifoReadout
 from contextlib import contextmanager
 
-from pytlu.online_monitor import sender
+from pytlu.online_monitor import pytlu_sender
 
 signal.signal(signal.SIGINT, signal.default_int_handler)
 root_logger = logging.getLogger()
@@ -84,7 +84,7 @@ class Tlu(Dut):
             self.socket = None
         else:
             try:
-                self.socket = sender.init(monitor_addr)
+                self.socket = pytlu_sender.init(monitor_addr)
                 self.logger.info('Inintialiying online_monitor: connected=%s' % monitor_addr)
             except:
                 self.logger.warn('Inintialiying online_monitor: failed addr=%s' % monitor_addr)
@@ -202,7 +202,7 @@ class Tlu(Dut):
         # close socket
         if self.socket is not None:
             try:
-                sender.close(self.socket)
+                pytlu_sender.close(self.socket)
             except:
                 pass
         super(Tlu, self).close()
@@ -233,11 +233,11 @@ class Tlu(Dut):
         # sending data to online monitor
         if self.socket is not None:
             try:
-                sender.send_data(self.socket, data_tuple, len_raw_data)
+                pytlu_sender.send_data(self.socket, data_tuple, len_raw_data)
             except:
-                self.logger.warn('online_monitor.sender.send_data failed %s' % str(sys.exc_info()))
+                self.logger.warn('online_monitor.pytlu_sender.send_data failed %s' % str(sys.exc_info()))
                 try:
-                    sender.close(self.socket)
+                    pytlu_sender.close(self.socket)
                 except:
                     pass
                 self.socket = None
