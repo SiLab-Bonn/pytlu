@@ -17,10 +17,10 @@ setup(
     long_description='',
     author='Janek Fleper, Tomasz Hemperek, Yannick Dieter',
     maintainer='Tomasz Hemperek',
-    author_email='j.fleper@gmx.de,hemeprek@uni-bonn.de,dieter@physik.uni-bonn.de',
+    author_email='j.fleper@gmx.de, hemeprek@uni-bonn.de, dieter@physik.uni-bonn.de',
     maintainer_email='hemeprek@uni-bonn.de',
     packages=find_packages(),
-    include_package_data=True,  
+    include_package_data=True,
     package_data={'': ['README.*'], 'pytlu': ['*.yaml', '*.bit']},
     entry_points={
         'console_scripts': [

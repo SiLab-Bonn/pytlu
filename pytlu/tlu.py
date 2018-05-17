@@ -23,7 +23,7 @@ from contextlib import contextmanager
 from pytlu.online_monitor import sender
 
 signal.signal(signal.SIGINT, signal.default_int_handler)
-root_logger=logging.getLogger()
+root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
 
@@ -38,10 +38,9 @@ class Tlu(Dut):
 
     def __init__(self, conf=None, output_folder=None, log_file=None, data_file=None, monitor_addr=None):
 
-        cnfg = conf
-        logging.info("Loading configuration file from %s" % conf)
         if conf is None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
+        logging.info("Loading configuration file from %s" % conf)
 
         self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
                                     ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
