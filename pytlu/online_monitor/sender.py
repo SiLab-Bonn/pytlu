@@ -39,6 +39,7 @@ def send_data(socket, data, scan_parameters={}, name='ReadoutData'):
         name=name,
         dtype=str(data[0].dtype),
         shape=data[0].shape,
+        data_length=len_raw_data,  # data length
         timestamp_start=data[1],  # float
         timestamp_stop=data[2],  # float
         readout_error=data[3],  # int
