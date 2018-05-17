@@ -16,6 +16,7 @@ The main features of the DAQ software and FPGA firmware are:
 - continuous data storage of accepted triggers (trigger id, timestamp, TDC)
 - testbench for software and firmware
 - example fpga receiver module : https://github.com/SiLab-Bonn/basil/tree/master/firmware/modules/tlu
+- data monitoring via [online monitor](https://github.com/SiLab-Bonn/online_monitor)
 
 The data of all accepted triggers will be stored in a .h5 file. It contains the following data:
 
@@ -60,6 +61,11 @@ in case you are using a debian-based distribution.
 In order to get a description of the possible input arguments run:
 ```bash
 pytlu -h
+```
+
+In order to start pytlu online monitor run:
+```bash
+pytlu_monitor
 ```
 
 Example:
