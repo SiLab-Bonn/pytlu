@@ -1,10 +1,7 @@
-from online_monitor.converter.transceiver import Transceiver
-from zmq.utils import jsonapi
 import numpy as np
 
-# pyBAR related imports
-from pybar_fei4_interpreter.data_interpreter import PyDataInterpreter
-
+from zmq.utils import jsonapi
+from online_monitor.converter.transceiver import Transceiver
 from online_monitor.utils import utils
 
 
