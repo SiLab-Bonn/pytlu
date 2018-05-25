@@ -72,7 +72,7 @@ class PyTLU(Receiver):
     def deserialze_data(self, data):
         return jsonapi.loads(data, object_hook=utils.json_numpy_obj_hook)
 
-    def handle_data(self, data):
+    def handle_data_if_active(self, data):
         # look for TLU data in data stream
         if 'tlu' in data:
             # fill plots
