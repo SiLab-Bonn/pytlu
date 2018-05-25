@@ -50,6 +50,9 @@ def main():
 
     utils.setup_logging(args.log)
 
+    # Start the producer
+    producer_manager_process = run_script_in_shell('', args.config_file,
+                                                    'start_producer_sim')
     # Start the converter
     converter_manager_process = run_script_in_shell('', args.config_file,
                                                     'start_converter')
@@ -60,6 +63,7 @@ def main():
         # Stop other processes
         try:
             kill(converter_manager_process)
+            kill(producer_manager_process)
         # If the process was never started it cannot be killed
         except psutil.NoSuchProcess:
             pass
