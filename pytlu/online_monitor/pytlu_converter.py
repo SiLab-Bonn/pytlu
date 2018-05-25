@@ -10,10 +10,6 @@ class PyTLU(Transceiver):
         self.set_bidirectional_communication()  # We want to be able to change the histogrammmer settings
 
     def setup_interpretation(self):
-        # variables to determine whether to send data to receiver or not
-        self.active_tab = None  # stores name (str) of active tab in online monitor
-        self.tlu_tab = 'TLU_Converter'  # store name (str) of Telescope_Status tab
-
         # array for simulated status data
         self.status_data = np.zeros(shape=1, dtype=[('trigger_rate', 'f4')])
         # set array size; must be shape=(2, x); increase x to plot longer time span
@@ -114,9 +110,6 @@ class PyTLU(Transceiver):
 
     def handle_command(self, command):
         # received signal is 'ACTIVETAB tab' where tab is the name (str) of the selected tab in online monitor
-        if 'ACTIVETAB' in command[0]:
-            self.active_tab = str(command[0].split()[1])
-
         if command[0] == 'RESET':
             self.trigger_rate_array = np.zeros_like(self.trigger_rate_array)
             self.array_indices['trigger_rate'] = 0
