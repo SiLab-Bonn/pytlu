@@ -8,6 +8,7 @@ import datetime
 
 data_iterable = ("data", "timestamp_start", "timestamp_stop", "error")
 
+
 class FifoError(Exception):
     pass
 
@@ -68,7 +69,7 @@ class FifoReadout(object):
             self._result.get()
         self._calculate.set()
         try:
-            result = self._result.get(timeout=2 * self.readout_interval)
+            result = self._result.get(timeout=self.readout_interval)
         except Empty:
             self._calculate.clear()
             return None
@@ -188,8 +189,8 @@ class FifoReadout(object):
                     break
                 else:
                     self._words_per_read.append(0)
-            #finally:
-            #    time_wait = self.readout_interval - (time() - time_read)
+            finally:
+                time_wait = self.readout_interval - (time() - time_read)
             if self._calculate.is_set():
                 self._calculate.clear()
                 self._result.put(sum(self._words_per_read))
@@ -205,7 +206,7 @@ class FifoReadout(object):
             try:
                 data = self._data_deque.popleft()
             except IndexError:
-                self.stop_readout.wait(self.readout_interval)  # sleep a little bit, reducing CPU usage
+                self.stop_readout.wait(self.readout_interval / 2.0)  # sleep a little bit, reducing CPU usage
             else:
                 if data is None:  # if None then exit
                     break
