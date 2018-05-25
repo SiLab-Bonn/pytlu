@@ -52,12 +52,11 @@ class PyTLU(Receiver):
         trigger_rate_graphics = pg.GraphicsLayoutWidget()
         trigger_rate_graphics.show()
         plot_trigger_rate = pg.PlotItem(labels={'left': 'Trigger Rate / kHz', 'bottom': 'Time / s'})
-        self.trigger_rate_curve = pg.PlotCurveItem(pen='r')
+        self.trigger_rate_curve = pg.PlotCurveItem(pen='#B00B13')
 
         # add items to plots and customize plots viewboxes
         plot_trigger_rate.addItem(self.trigger_rate_curve)
-        plot_trigger_rate.vb.setBackgroundColor('#545454')
-        # plot_trigger_rate.setYRange(7,9,padding=0)
+        plot_trigger_rate.vb.setBackgroundColor('#E6E5F4')
         plot_trigger_rate.setXRange(-60, 0)
         plot_trigger_rate.getAxis('left').setZValue(0)
         plot_trigger_rate.getAxis('left').setGrid(155)
@@ -87,7 +86,8 @@ class PyTLU(Receiver):
                 # if array full, plot entire array
                 elif data['indices'][key] >= data['tlu'][key].shape[1]:
                     # set the plot data to the corresponding arrays
-                    self.plots[key].setData(data['tlu'][key][0], data['tlu'][key][1], autoDownsample=True)
+                    self.plots[key].setData(data['tlu'][key][0],
+                                            data['tlu'][key][1], autoDownsample=True)
 
         # set timestamp, plot delay and readour rate
         self.rate_label.setText("Readout Rate\n%d Hz" % data['fps'])
