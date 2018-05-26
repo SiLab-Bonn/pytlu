@@ -22,7 +22,7 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH=$HOME/miniconda/bin:$PATH
   - conda update --yes conda
-  - conda install --yes numpy bitarray pytest pyyaml pytables pyqt os
+  - conda install --yes numpy bitarray pytest pyyaml pytables pyqt
   - pip install cocotb
   - pip install xvfbwrapper  # fake x server for Qt gui tests
   
