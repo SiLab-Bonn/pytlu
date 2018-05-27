@@ -39,6 +39,7 @@ def send_data(socket, data, len_raw_data, scan_parameters={}, name='ReadoutData'
         timestamp_start=data[1],  # float
         timestamp_stop=data[2],  # float
         readout_error=data[3],  # int
+        skipped_triggers=data[4],  # skipped trigger counter
         scan_parameters=scan_parameters  # dict
     )
     try:

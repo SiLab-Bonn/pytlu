@@ -37,7 +37,11 @@ class PyTLU(ProducerSim):
             index_start, index_stop = self.readout_word_indeces[self.actual_readout]
             data = []
             data.append(self.raw_data[index_start:index_stop])
-            data.extend((float(self.meta_data[self.actual_readout]['timestamp_start']), float(self.meta_data[self.actual_readout]['timestamp_stop']), int(self.meta_data[self.actual_readout]['error'])))
+            data.extend((float(self.meta_data[self.actual_readout]['timestamp_start']),
+                         float(self.meta_data[self.actual_readout]['timestamp_stop']),
+                         int(self.meta_data[self.actual_readout]['error']),
+                         int(self.meta_data[self.actual_readout]['skipped_triggers'])))
+
             # FIXME: Simple syncronization to replay with similar timing, does not really work
             now = time.time()
 
@@ -76,8 +80,9 @@ class PyTLU(ProducerSim):
             timestamp_start=data[1],  # float
             timestamp_stop=data[2],  # float
             readout_error=data[3],  # int
+            skipped_triggers=data[4],  # skipped trigger counter
             scan_parameters=scan_parameters  # dict
-    )
+            )
         try:
             self.total_data += data[0].nbytes  # sum up sent data packages
             self.sender.send_json(data_meta_data, flags=zmq.SNDMORE | zmq.NOBLOCK)
