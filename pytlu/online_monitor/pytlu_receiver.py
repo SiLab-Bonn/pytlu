@@ -52,10 +52,20 @@ class PyTLU(Receiver):
         trigger_rate_graphics = pg.GraphicsLayoutWidget()
         trigger_rate_graphics.show()
         plot_trigger_rate = pg.PlotItem(labels={'left': 'Trigger Rate / kHz', 'bottom': 'Time / s'})
-        self.trigger_rate_curve = pg.PlotCurveItem(pen='#B00B13')
+        self.trigger_rate_acc_curve = pg.PlotCurveItem(pen='#B00B13')
+        self.trigger_rate_real_curve = pg.PlotCurveItem(pen='#228B22')
+
+        # add legend
+        legend_acc = pg.LegendItem(offset=(80, 10))
+        legend_acc.setParentItem(plot_trigger_rate)
+        legend_acc.addItem(self.trigger_rate_acc_curve, 'Accepted Trigger Rate')
+        legend_real = pg.LegendItem(offset=(80, 50))
+        legend_real.setParentItem(plot_trigger_rate)
+        legend_real.addItem(self.trigger_rate_real_curve, 'Real Trigger Rate')
 
         # add items to plots and customize plots viewboxes
-        plot_trigger_rate.addItem(self.trigger_rate_curve)
+        plot_trigger_rate.addItem(self.trigger_rate_acc_curve)
+        plot_trigger_rate.addItem(self.trigger_rate_real_curve)
         plot_trigger_rate.vb.setBackgroundColor('#E6E5F4')
         plot_trigger_rate.setXRange(-60, 0)
         plot_trigger_rate.getAxis('left').setZValue(0)
@@ -66,7 +76,8 @@ class PyTLU(Receiver):
         dock_rate.addWidget(trigger_rate_graphics)
 
         # add dict of all used plotcurveitems for individual handling of each plot
-        self.plots = {'trigger_rate': self.trigger_rate_curve}
+        self.plots = {'trigger_rate_acc': self.trigger_rate_acc_curve,
+                      'trigger_rate_real': self.trigger_rate_real_curve}
         self.plot_delay = 0
 
     def deserialze_data(self, data):
