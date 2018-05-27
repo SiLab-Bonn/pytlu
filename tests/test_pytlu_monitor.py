@@ -137,7 +137,7 @@ class TestOnlineMonitor(unittest.TestCase):
         data_recv_0 = []
         self.app.processEvents()
         for receiver in self.online_monitor.receivers:
-            data_recv_0.append(receiver.trigger_rate_curve.getData())
+            data_recv_0.append(receiver.trigger_rate_acc_curve.getData())
 
         # Case 2: Activate TLU widget, receiver should show data
         self.online_monitor.tab_widget.setCurrentIndex(1)
@@ -149,7 +149,7 @@ class TestOnlineMonitor(unittest.TestCase):
         # is active
         data_recv_1 = []
         for receiver in self.online_monitor.receivers:
-            data_recv_1.append(receiver.trigger_rate_curve.getData())
+            data_recv_1.append(receiver.trigger_rate_acc_curve.getData())
 
         self.assertTrue(len(data_recv_0[0][0]) != 0)  # check for emptyness of data list
         self.assertTrue(len(data_recv_1[0][0]) != 0)  # check for emptyness of data list

@@ -11,34 +11,41 @@ class PyTLU(Transceiver):
 
     def setup_interpretation(self):
         # array for simulated status data
-        self.status_data = np.zeros(shape=1, dtype=[('trigger_rate', 'f4')])
+        self.status_data = np.zeros(shape=1, dtype=[('trigger_rate_acc', 'f4'), ('trigger_rate_real', 'f4')])
         # set array size; must be shape=(2, x); increase x to plot longer time span
         self.array_size = (2, 1600)
 
         # add arrays for plots; array[0] is time axis
-        self.trigger_rate_array = np.zeros(shape=self.array_size)
+        self.trigger_rate_acc_array = np.zeros(shape=self.array_size)
+        self.trigger_rate_real_array = np.zeros(shape=self.array_size)
 
         # add dicts for individual handling of each parameter
         # Using structured np.arrays produces weird VisibleDeprecationWarning
         # dict with all data arrays
-        self.all_arrays = {'trigger_rate': self.trigger_rate_array}
+        self.all_arrays = {'trigger_rate_acc': self.trigger_rate_acc_array,
+                           'trigger_rate_real': self.trigger_rate_real_array}
 
         # dict with set of current data indices
-        self.array_indices = {'trigger_rate': 0}
+        self.array_indices = {'trigger_rate_acc': 0,
+                              'trigger_rate_real': 0}
 
         # dict with set of start times of each key since last shifted through
-        self.shift_cycle_times = {'trigger_rate': 0}
+        self.shift_cycle_times = {'trigger_rate_acc': 0,
+                                  'trigger_rate_real': 0}
 
         # dict with set of current time indices
-        self.update_time_indices = {'trigger_rate': 0}
+        self.update_time_indices = {'trigger_rate_acc': 0,
+                                    'trigger_rate_real': 0}
 
         # dict with set of current times corresponding current data
-        self.now = {'trigger_rate': 0}
+        self.now = {'trigger_rate_acc': 0,
+                    'trigger_rate_real': 0}
 
         self.updateTime = 0
         self.fps = 0
         self.readout = 0
         self.n_readouts = 0
+        self.skipped_trigger_counter_old = 0  # variable needed to calcualte actual trigger counter
 
     def deserialze_data(self, data):  # According to pyBAR data serilization
         try:
@@ -70,7 +77,11 @@ class PyTLU(Transceiver):
             data_length = meta_data['data_length']
             timestamp_start = meta_data['timestamp_start']
             timestamp_stop = meta_data['timestamp_stop']
-            self.status_data['trigger_rate'] = data_length / (timestamp_stop - timestamp_start) / 1e3  # trigger rate in kHz
+            skipped_triggers = meta_data['skipped_triggers']
+            actual_skipped_triggers = skipped_triggers - self.skipped_trigger_counter_old
+            self.status_data['trigger_rate_acc'] = data_length / (timestamp_stop - timestamp_start) / 1e3  # acc trigger rate in kHz
+            self.status_data['trigger_rate_real'] = (data_length + actual_skipped_triggers) / (timestamp_stop - timestamp_start) / 1e3  # real trigger rate in kHz
+            self.skipped_trigger_counter_old = skipped_triggers
 
             # fill time and data axes, here only one key (trigger rate) up to now
             for key in self.all_arrays:
@@ -100,9 +111,12 @@ class PyTLU(Transceiver):
 
         if self.n_readouts != 0:  # = 0 for infinite integration
             if self.readout % self.n_readouts == 0:
-                self.trigger_rate_array = np.zeros_like(self.trigger_rate_array)
-                self.array_indices['trigger_rate'] = 0
-                self.update_time_indices['trigger_rate'] = 0
+                self.trigger_rate_acc_array = np.zeros_like(self.trigger_rate_acc_array)
+                self.trigger_rate_real_array = np.zeros_like(self.trigger_rate_real_array)
+                self.array_indices['trigger_rate_acc'] = 0
+                self.array_indices['trigger_rate_real'] = 0
+                self.update_time_indices['trigger_rate_acc'] = 0
+                self.update_time_indices['trigger_rate_real'] = 0
                 self.readouts = 0
 
     def serialze_data(self, data):
@@ -111,8 +125,11 @@ class PyTLU(Transceiver):
     def handle_command(self, command):
         # received signal is 'ACTIVETAB tab' where tab is the name (str) of the selected tab in online monitor
         if command[0] == 'RESET':
-            self.trigger_rate_array = np.zeros_like(self.trigger_rate_array)
-            self.array_indices['trigger_rate'] = 0
-            self.update_time_indices['trigger_rate'] = 0
+            self.trigger_rate_acc_array = np.zeros_like(self.trigger_rate_acc_array)
+            self.trigger_rate_real_array = np.zeros_like(self.trigger_rate_real_array)
+            self.array_indices['trigger_rate_acc'] = 0
+            self.array_indices['trigger_rate_real'] = 0
+            self.update_time_indices['trigger_rate_acc'] = 0
+            self.update_time_indices['trigger_rate_real'] = 0
         else:
             self.n_readouts = int(command[0])
