@@ -38,7 +38,7 @@ setup(
 
 
 # FIXME: bad practice to put code into setup.py
-# Add the online_monitor bdaq53 plugins
+# Add the online_monitor pytlu plugins
 try:
     import os
     from online_monitor.utils import settings
