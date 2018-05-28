@@ -28,6 +28,7 @@ setup(
             'pytlu_monitor = pytlu.online_monitor.start_pytlu_online_monitor:main',
         ]
     },
+    setup_requires=['online_monitor==0.3.1'],
     install_requires=[
           'basil_daq >= 2.4.10',
           'online_monitor==0.3.1',
@@ -39,14 +40,17 @@ setup(
 
 # FIXME: bad practice to put code into setup.py
 # Add the online_monitor pytlu plugins
-import os
-from online_monitor.utils import settings
-# Get the absoulte path of this package
-package_path = os.path.dirname(pytlu.__file__)
-# Add online_monitor plugin folder to entity search paths
-settings.add_producer_sim_path(os.path.join(package_path,
-                                            'online_monitor'))
-settings.add_converter_path(os.path.join(package_path,
-                                         'online_monitor'))
-settings.add_receiver_path(os.path.join(package_path,
-                                        'online_monitor'))
+try:
+    import os
+    from online_monitor.utils import settings
+    # Get the absoulte path of this package
+    package_path = os.path.dirname(pytlu.__file__)
+    # Add online_monitor plugin folder to entity search paths
+    settings.add_producer_sim_path(os.path.join(package_path,
+                                                'utils'))
+    settings.add_converter_path(os.path.join(package_path,
+                                             'converter'))
+    settings.add_receiver_path(os.path.join(package_path,
+                                            'receiver'))
+except ImportError:
+    pass
