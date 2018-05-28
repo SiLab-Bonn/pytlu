@@ -40,6 +40,7 @@ setup(
 # FIXME: bad practice to put code into setup.py
 # Add the online_monitor pytlu plugins
 try:
+    print 'SET ONLINE MONITOR PATHS'
     import os
     from online_monitor.utils import settings
     # Get the absoulte path of this package
