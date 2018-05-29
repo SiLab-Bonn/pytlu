@@ -1,0 +1,17 @@
+#producer_sim :
+#    TLU_Producer :
+#        backend : tcp://127.0.0.1:8600
+#        delay : 0.1
+#        kind : pytlu_producer_sim
+#        data_file: /home/silab/git/pytlu/data/tlu_example_data.h5
+
+converter :
+    TLU_Converter :
+        kind : pytlu_converter
+        frontend : tcp://127.0.0.1:8600
+        backend : tcp://127.0.0.1:8700
+
+receiver :
+    TLU :
+        kind : pytlu_receiver
+        frontend : tcp://127.0.0.1:8700

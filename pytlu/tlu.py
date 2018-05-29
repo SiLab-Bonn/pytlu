@@ -20,8 +20,10 @@ import numpy as np
 from fifo_readout import FifoReadout
 from contextlib import contextmanager
 
+from pytlu.online_monitor import pytlu_sender
+
 signal.signal(signal.SIGINT, signal.default_int_handler)
-root_logger=logging.getLogger()
+root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
 
@@ -36,10 +38,9 @@ class Tlu(Dut):
 
     def __init__(self, conf=None, output_folder=None, log_file=None, data_file=None, monitor_addr=None):
 
-        cnfg = conf
-        logging.info("Loading configuration file from %s" % conf)
         if conf is None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
+        logging.info("Loading configuration file from %s" % conf)
 
         self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
                                     ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
@@ -82,9 +83,8 @@ class Tlu(Dut):
         if monitor_addr is None:
             self.socket = None
         else:
-            self.sender = __import__('pytlu.online_monitor.sender')
             try:
-                self.socket = self.sender.init(monitor_addr)
+                self.socket = pytlu_sender.init(monitor_addr)
                 self.logger.info('Inintialiying online_monitor: connected=%s' % monitor_addr)
             except:
                 self.logger.warn('Inintialiying online_monitor: failed addr=%s' % monitor_addr)
@@ -202,7 +202,7 @@ class Tlu(Dut):
         # close socket
         if self.socket is not None:
             try:
-                self.sender.close(self.socket)
+                pytlu_sender.close(self.socket)
             except:
                 pass
         super(Tlu, self).close()
@@ -233,11 +233,11 @@ class Tlu(Dut):
         # sending data to online monitor
         if self.socket is not None:
             try:
-                self.sender.send_data(self.socket, data_tuple)
+                pytlu_sender.send_data(self.socket, data_tuple, len_raw_data)
             except:
-                self.logger.warn('online_monitor.sender.send_data failed %s' % str(sys.exc_info()))
+                self.logger.warn('online_monitor.pytlu_sender.send_data failed %s' % str(sys.exc_info()))
                 try:
-                    self.sender.close(self.socket)
+                    pytlu_sender.close(self.socket)
                 except:
                     pass
                 self.socket = None
