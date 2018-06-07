@@ -1,8 +1,8 @@
 import time
-import pyqtgraph as pg
 
 from PyQt5 import Qt
-from pyqtgraph.Qt import QtCore, QtGui
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtGui
 from pyqtgraph.dockarea import DockArea, Dock
 import pyqtgraph.ptime as ptime
 

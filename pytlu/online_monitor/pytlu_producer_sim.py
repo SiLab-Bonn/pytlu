@@ -82,7 +82,7 @@ class PyTLU(ProducerSim):
             readout_error=data[3],  # int
             skipped_triggers=data[4],  # skipped trigger counter
             scan_parameters=scan_parameters  # dict
-            )
+        )
         try:
             self.total_data += data[0].nbytes  # sum up sent data packages
             self.sender.send_json(data_meta_data, flags=zmq.SNDMORE | zmq.NOBLOCK)

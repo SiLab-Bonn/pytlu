@@ -44,8 +44,8 @@ class FifoReadout(object):
         self._is_running = False
         self.reset_sram_fifo()
         self._record_count_lock = Lock()
-        self.set_record_count(0,reset=True)
-        
+        self.set_record_count(0, reset=True)
+
     @property
     def is_running(self):
         return self._is_running
@@ -138,7 +138,6 @@ class FifoReadout(object):
 
     def print_readout_status(self):
         tlu_lost_count = self.get_data_tlu_fifo_lost_count()
-        
         logging.info('Received words: %d', self._record_count)
         logging.info('Data queue size: %d', len(self._data_deque))
         logging.info('SRAM FIFO size: %d', self.dut['stream_fifo']['SIZE'])
@@ -158,15 +157,14 @@ class FifoReadout(object):
         time_wait = 0.0
         while not self.force_stop.wait(time_wait if time_wait >= 0.0 else 0.0):
             try:
-            #if True:
                 time_read = time()
                 if no_data_timeout and curr_time + no_data_timeout < self.get_float_time():
                     raise NoDataTimeout('Received no data for %0.1f second(s)' % no_data_timeout)
                 data = self.read_data()
                 self._record_count += len(data)
-                #print self._record_count
+                # print self._record_count
             except Exception:
-                logging.warn('Exception occured %s',sys.exc_info()[2])
+                logging.warn('Exception occured %s', sys.exc_info()[2])
                 no_data_timeout = None  # raise exception only once
                 if self.errback:
                     self.errback(sys.exc_info())
@@ -222,7 +220,7 @@ class FifoReadout(object):
         logging.debug('Starting %s', self.watchdog_thread.name)
         while True:
             try:
-                
+
                 if self.get_data_tlu_fifo_lost_count():
                     raise FifoError('TLU FIFO lost data error(s) detected')
             except Exception:
@@ -242,19 +240,19 @@ class FifoReadout(object):
 
     def read_status(self):
         raise NotImplementedError()
-        
+
     def get_record_count(self):
         self._record_count_lock.acquire()
-        cnt=self._record_count
+        cnt = self._record_count
         self._record_count_lock.release()
         return cnt
-    
-    def set_record_count(self,cnt,reset=False):
+
+    def set_record_count(self, cnt, reset=False):
         self._record_count_lock.acquire()
         if reset:
-            self._record_count=cnt
+            self._record_count = cnt
         else:
-            self._record_count=self._record_count+cnt
+            self._record_count = self._record_count + cnt
         self._record_count_lock.release()
 
     def reset_sram_fifo(self):
@@ -275,9 +273,7 @@ class FifoReadout(object):
 
     def get_float_time(self):
         '''returns time as double precision floats - Time64 in pytables - mapping to and from python datetime's
-
         '''
         t1 = time()
         t2 = datetime.datetime.fromtimestamp(t1)
         return mktime(t2.timetuple()) + 1e-6 * t2.microsecond
-    
