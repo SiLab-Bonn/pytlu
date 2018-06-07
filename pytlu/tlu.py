@@ -95,7 +95,7 @@ class Tlu(Dut):
                 self.socket = pytlu_sender.init(monitor_addr)
                 self.logger.info('Initializing online_monitor: connected to %s' % monitor_addr)
             except Exception:
-                self.logger.warn('Initializing online_monitor: failed to connect to %s' % monitor_addr)
+                self.logger.warning('Initializing online_monitor: failed to connect to %s' % monitor_addr)
                 self.socket = None
 
         super(Tlu, self).__init__(conf)
@@ -243,7 +243,7 @@ class Tlu(Dut):
             try:
                 pytlu_sender.send_data(self.socket, data_tuple, len_raw_data)
             except Exception:
-                self.logger.warn('online_monitor.pytlu_sender.send_data failed %s' % str(sys.exc_info()))
+                self.logger.warning('online_monitor.pytlu_sender.send_data failed %s' % str(sys.exc_info()))
                 try:
                     pytlu_sender.close(self.socket)
                 except Exception:
@@ -251,11 +251,10 @@ class Tlu(Dut):
                 self.socket = None
 
     def handle_err(self, exc):
-        pass
+        self.logger.warning(exc[1].__class__.__name__ + ": " + str(exc[1]))
 
 
 def main():
-
     input_ch = ['CH0', 'CH1', 'CH2', 'CH3']
     output_ch = ['CH0', 'CH1', 'CH2', 'CH3', 'CH4', 'CH5', 'LEMO0', 'LEMO1', 'LEMO2', 'LEMO3']
 
