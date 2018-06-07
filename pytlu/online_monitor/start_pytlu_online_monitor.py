@@ -3,10 +3,10 @@
 the online_monitor with pytlu plugins. Not really needed
 start_online_monitor config.yaml would also work...
 '''
+import logging
 import sys
 import os
 import subprocess
-import logging
 
 import psutil
 from PyQt5 import Qt
@@ -51,10 +51,12 @@ def main():
     utils.setup_logging(args.log)
 
     # Start the producer
-    producer_manager_process = run_script_in_shell('', args.config_file,
-                                                    'start_producer_sim')
+    producer_manager_process = run_script_in_shell('',
+                                                   args.config_file,
+                                                   'start_producer_sim')
     # Start the converter
-    converter_manager_process = run_script_in_shell('', args.config_file,
+    converter_manager_process = run_script_in_shell('',
+                                                    args.config_file,
                                                     'start_converter')
 
 # Helper function to run code after OnlineMonitor Application exit
