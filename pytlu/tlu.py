@@ -93,9 +93,9 @@ class Tlu(Dut):
         else:
             try:
                 self.socket = pytlu_sender.init(monitor_addr)
-                self.logger.info('Inintialiying online_monitor: connected=%s' % monitor_addr)
-            except:
-                self.logger.warn('Inintialiying online_monitor: failed addr=%s' % monitor_addr)
+                self.logger.info('Initializing online_monitor: connected to %s' % monitor_addr)
+            except Exception:
+                self.logger.warn('Initializing online_monitor: failed to connect to %s' % monitor_addr)
                 self.socket = None
 
         super(Tlu, self).__init__(conf)
