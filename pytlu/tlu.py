@@ -5,20 +5,23 @@
 # ------------------------------------------------------------
 #
 
-import yaml
-import basil
-from basil.dut import Dut
 import logging
 import os
 import sys
 import time
 import argparse
 import signal
+
+from contextlib import contextmanager
+import yaml
 import tables as tb
 import numpy as np
 
+import basil
+from basil.dut import Dut
+
 from fifo_readout import FifoReadout
-from contextlib import contextmanager
+
 
 from pytlu.online_monitor import pytlu_sender
 
@@ -339,7 +342,7 @@ def main():
             freq = 0
         if freq_all is None:
             freq_all = 0
-        logging.info("Trigger:%8d Skip:%8d Timeout:%2d Rate:%.2f(%.2f)Hz TxState:%06x" % (
+        logging.info("Trigger: %8d | Skip: %8d | Timeout: %2d | Rate: %.2f (%.2f) Hz | TxState: %06x" % (
             chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
             freq, freq_all, chip['tlu_master'].TX_STATE))
 
