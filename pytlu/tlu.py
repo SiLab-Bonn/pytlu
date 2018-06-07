@@ -205,13 +205,13 @@ class Tlu(Dut):
     def close(self):
         try:
             self.h5_file.close()
-        except:
+        except Exception:
             pass
         # close socket
         if self.socket is not None:
             try:
                 pytlu_sender.close(self.socket)
-            except:
+            except Exception:
                 pass
         super(Tlu, self).close()
 
@@ -242,11 +242,11 @@ class Tlu(Dut):
         if self.socket is not None:
             try:
                 pytlu_sender.send_data(self.socket, data_tuple, len_raw_data)
-            except:
+            except Exception:
                 self.logger.warn('online_monitor.pytlu_sender.send_data failed %s' % str(sys.exc_info()))
                 try:
                     pytlu_sender.close(self.socket)
-                except:
+                except Exception:
                     pass
                 self.socket = None
 
