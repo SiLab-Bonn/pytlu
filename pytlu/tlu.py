@@ -11,18 +11,15 @@ import sys
 import time
 import argparse
 import signal
-
 from contextlib import contextmanager
+
 import yaml
 import tables as tb
 import numpy as np
 
-import basil
 from basil.dut import Dut
 
-from fifo_readout import FifoReadout
-
-
+from pytlu.fifo_readout import FifoReadout
 from pytlu.online_monitor import pytlu_sender
 
 root_logger = logging.getLogger()
