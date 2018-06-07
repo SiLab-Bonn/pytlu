@@ -182,8 +182,6 @@ class Tlu(Dut):
     @contextmanager
     def readout(self, *args, **kwargs):
         if not self._first_read:
-            time.sleep(0.1)
-
             self.filter_data = tb.Filters(complib='blosc', complevel=5)
             self.filter_tables = tb.Filters(complib='zlib', complevel=5)
             self.h5_file = tb.open_file(self.data_file, mode='w', title='TLU')
@@ -195,12 +193,17 @@ class Tlu(Dut):
             self.fifo_readout.print_readout_status()
             self._first_read = True
 
-        self.fifo_readout.start(
-            callback=self.handle_data, errback=self.handle_err)
-        yield
-        self.fifo_readout.stop()
-        self.fifo_readout.print_readout_status()
-        self.meta_data_table.attrs.config = yaml.dump(self.get_configuration())
+        self.fifo_readout.start(callback=self.handle_data,
+                                errback=self.handle_err)
+        try:
+            yield
+        finally:
+            try:
+                self.fifo_readout.stop()
+            except Exception:
+                self.fifo_readout.stop(timeout=0.0)
+            self.fifo_readout.print_readout_status()
+            self.meta_data_table.attrs.config = yaml.dump(self.get_configuration())
 
     def close(self):
         try:
