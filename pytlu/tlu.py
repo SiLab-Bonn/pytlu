@@ -5,27 +5,35 @@
 # ------------------------------------------------------------
 #
 
-import yaml
-import basil
-from basil.dut import Dut
 import logging
 import os
 import sys
 import time
 import argparse
 import signal
+from contextlib import contextmanager
+
+import yaml
 import tables as tb
 import numpy as np
 
-from fifo_readout import FifoReadout
-from contextlib import contextmanager
+from basil.dut import Dut
 
+from pytlu.fifo_readout import FifoReadout
 from pytlu.online_monitor import pytlu_sender
 
-signal.signal(signal.SIGINT, signal.default_int_handler)
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
+
+stop_run = False
+
+
+def handle_sig(signum, frame):
+    logging.info('Pressed Ctrl-C')
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    global stop_run
+    stop_run = True
 
 
 class Tlu(Dut):
@@ -85,9 +93,9 @@ class Tlu(Dut):
         else:
             try:
                 self.socket = pytlu_sender.init(monitor_addr)
-                self.logger.info('Inintialiying online_monitor: connected=%s' % monitor_addr)
-            except:
-                self.logger.warn('Inintialiying online_monitor: failed addr=%s' % monitor_addr)
+                self.logger.info('Initializing online_monitor: connected to %s' % monitor_addr)
+            except Exception:
+                self.logger.warning('Initializing online_monitor: failed to connect to %s' % monitor_addr)
                 self.socket = None
 
         super(Tlu, self).__init__(conf)
@@ -174,8 +182,6 @@ class Tlu(Dut):
     @contextmanager
     def readout(self, *args, **kwargs):
         if not self._first_read:
-            time.sleep(0.1)
-
             self.filter_data = tb.Filters(complib='blosc', complevel=5)
             self.filter_tables = tb.Filters(complib='zlib', complevel=5)
             self.h5_file = tb.open_file(self.data_file, mode='w', title='TLU')
@@ -187,23 +193,28 @@ class Tlu(Dut):
             self.fifo_readout.print_readout_status()
             self._first_read = True
 
-        self.fifo_readout.start(
-            callback=self.handle_data, errback=self.handle_err)
-        yield
-        self.fifo_readout.stop()
-        self.fifo_readout.print_readout_status()
-        self.meta_data_table.attrs.config = yaml.dump(self.get_configuration())
+        self.fifo_readout.start(callback=self.handle_data,
+                                errback=self.handle_err)
+        try:
+            yield
+        finally:
+            try:
+                self.fifo_readout.stop()
+            except Exception:
+                self.fifo_readout.stop(timeout=0.0)
+            self.fifo_readout.print_readout_status()
+            self.meta_data_table.attrs.config = yaml.dump(self.get_configuration())
 
     def close(self):
         try:
             self.h5_file.close()
-        except:
+        except Exception:
             pass
         # close socket
         if self.socket is not None:
             try:
                 pytlu_sender.close(self.socket)
-            except:
+            except Exception:
                 pass
         super(Tlu, self).close()
 
@@ -234,20 +245,19 @@ class Tlu(Dut):
         if self.socket is not None:
             try:
                 pytlu_sender.send_data(self.socket, data_tuple, len_raw_data)
-            except:
-                self.logger.warn('online_monitor.pytlu_sender.send_data failed %s' % str(sys.exc_info()))
+            except Exception:
+                self.logger.warning('online_monitor.pytlu_sender.send_data failed %s' % str(sys.exc_info()))
                 try:
                     pytlu_sender.close(self.socket)
-                except:
+                except Exception:
                     pass
                 self.socket = None
 
     def handle_err(self, exc):
-        pass
+        self.logger.warning(exc[1].__class__.__name__ + ": " + str(exc[1]))
 
 
 def main():
-
     input_ch = ['CH0', 'CH1', 'CH2', 'CH3']
     output_ch = ['CH0', 'CH1', 'CH2', 'CH3', 'CH4', 'CH5', 'LEMO0', 'LEMO1', 'LEMO2', 'LEMO3']
 
@@ -277,11 +287,11 @@ def main():
                         help="Timeout to wait for DUT. Default=0, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
-    parser.add_argument('-f', '--output_folder',  type=str,
+    parser.add_argument('-f', '--output_folder', type=str,
                         default=None, help='Output folder of data and log file.  Default: /pytlu/output_data')
-    parser.add_argument('-l', '--log',  type=str,
+    parser.add_argument('-l', '--log', type=str,
                         default=None, help='Name of log file')
-    parser.add_argument('-d', '--data',  type=str,
+    parser.add_argument('-d', '--data', type=str,
                         default=None, help='Name of data file')
     parser.add_argument('--monitor_addr', type=str, default=None,
                         help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
@@ -339,7 +349,7 @@ def main():
             freq = 0
         if freq_all is None:
             freq_all = 0
-        logging.info("Trigger:%8d Skip:%8d Timeout:%2d Rate:%.2f(%.2f)Hz TxState:%06x" % (
+        logging.info("Trigger: %8d | Skip: %8d | Timeout: %2d | Rate: %.2f (%.2f) Hz | TxState: %06x" % (
             chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
             freq, freq_all, chip['tlu_master'].TX_STATE))
 
@@ -348,15 +358,16 @@ def main():
     trigger_id_2 = 0
     skip2 = 0
 
+    logging.info("Starting... Press Ctrl+C to exit...")
+    signal.signal(signal.SIGINT, handle_sig)
     if args.test:
-        logging.info("Starting test...")
+        logging.info("Starting internal trigger generation...")
         with chip.readout():
             chip['test_pulser'].DELAY = args.test
             chip['test_pulser'].WIDTH = 1
             chip['test_pulser'].REPEAT = args.count
             chip['test_pulser'].START
-
-            while(not chip['test_pulser'].is_ready):
+            while not chip['test_pulser'].is_ready and not stop_run:
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
                 skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
@@ -367,19 +378,16 @@ def main():
                 trigger_id_2 = trigger_id_1
                 skip2 = skip1
                 time.sleep(1)
-            print_log()
-        return
-
-    logging.info("Starting ... Ctrl+C to exit scan_time=%ds" % args.scan_time)
-    with chip.readout():
-        chip['tlu_master'].EN_INPUT = in_en
-        while True:
-            try:
+            # reset pulser in case of abort
+            chip['test_pulser'].RESET
+    else:
+        with chip.readout():
+            chip['tlu_master'].EN_INPUT = in_en
+            while not stop_run:
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
                 skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
-
                 freq_all = freq + np.uint32(skip1 - skip2) / (time_1 - time_2)
                 print_log(freq=freq, freq_all=freq_all)
                 time_2 = time_1
@@ -388,16 +396,13 @@ def main():
                 if time_1 - start_time + 10 > args.scan_time and args.scan_time > 0:
                     time.sleep(args.scan_time - time.time() + start_time)
                     break
-                elif time_1-start_time < 30:
+                elif time_1 - start_time < 30:
                     time.sleep(1)
                 else:
                     time.sleep(5)
-            except KeyboardInterrupt:
-                break
-        chip['tlu_master'].EN_INPUT = 0
-        chip['tlu_master'].EN_OUTPUT = 0
-
-        print_log()
+    # close and disable inputs and outputs
+    chip['tlu_master'].EN_INPUT = 0
+    chip['tlu_master'].EN_OUTPUT = 0
     chip.close()
 
 
