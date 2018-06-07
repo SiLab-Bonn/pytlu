@@ -25,10 +25,18 @@ from fifo_readout import FifoReadout
 
 from pytlu.online_monitor import pytlu_sender
 
-signal.signal(signal.SIGINT, signal.default_int_handler)
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
+
+stop_run = False
+
+
+def handle_sig(signum, frame):
+    logging.info('Pressed Ctrl-C')
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    global stop_run
+    stop_run = True
 
 
 class Tlu(Dut):
@@ -351,15 +359,16 @@ def main():
     trigger_id_2 = 0
     skip2 = 0
 
+    logging.info("Starting... Press Ctrl+C to exit...")
+    signal.signal(signal.SIGINT, handle_sig)
     if args.test:
-        logging.info("Starting test...")
+        logging.info("Starting internal trigger generation...")
         with chip.readout():
             chip['test_pulser'].DELAY = args.test
             chip['test_pulser'].WIDTH = 1
             chip['test_pulser'].REPEAT = args.count
             chip['test_pulser'].START
-
-            while(not chip['test_pulser'].is_ready):
+            while not chip['test_pulser'].is_ready and not stop_run:
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
                 skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
@@ -370,19 +379,16 @@ def main():
                 trigger_id_2 = trigger_id_1
                 skip2 = skip1
                 time.sleep(1)
-            print_log()
-        return
-
-    logging.info("Starting ... Ctrl+C to exit scan_time=%ds" % args.scan_time)
-    with chip.readout():
-        chip['tlu_master'].EN_INPUT = in_en
-        while True:
-            try:
+            # reset pulser in case of abort
+            chip['test_pulser'].RESET
+    else:
+        with chip.readout():
+            chip['tlu_master'].EN_INPUT = in_en
+            while not stop_run:
                 time_1 = time.time()
                 trigger_id_1 = chip['tlu_master'].TRIGGER_ID
                 skip1 = chip['tlu_master'].SKIP_TRIG_COUNTER
                 freq = (trigger_id_1 - trigger_id_2) / (time_1 - time_2)
-
                 freq_all = freq + np.uint32(skip1 - skip2) / (time_1 - time_2)
                 print_log(freq=freq, freq_all=freq_all)
                 time_2 = time_1
@@ -395,12 +401,9 @@ def main():
                     time.sleep(1)
                 else:
                     time.sleep(5)
-            except KeyboardInterrupt:
-                break
-        chip['tlu_master'].EN_INPUT = 0
-        chip['tlu_master'].EN_OUTPUT = 0
-
-        print_log()
+    # close and disable inputs and outputs
+    chip['tlu_master'].EN_INPUT = 0
+    chip['tlu_master'].EN_OUTPUT = 0
     chip.close()
 
 
