@@ -285,11 +285,11 @@ def main():
                         help="Timeout to wait for DUT. Default=0, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
     parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
                         help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
-    parser.add_argument('-f', '--output_folder',  type=str,
+    parser.add_argument('-f', '--output_folder', type=str,
                         default=None, help='Output folder of data and log file.  Default: /pytlu/output_data')
-    parser.add_argument('-l', '--log',  type=str,
+    parser.add_argument('-l', '--log', type=str,
                         default=None, help='Name of log file')
-    parser.add_argument('-d', '--data',  type=str,
+    parser.add_argument('-d', '--data', type=str,
                         default=None, help='Name of data file')
     parser.add_argument('--monitor_addr', type=str, default=None,
                         help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
@@ -394,7 +394,7 @@ def main():
                 if time_1 - start_time + 10 > args.scan_time and args.scan_time > 0:
                     time.sleep(args.scan_time - time.time() + start_time)
                     break
-                elif time_1-start_time < 30:
+                elif time_1 - start_time < 30:
                     time.sleep(1)
                 else:
                     time.sleep(5)

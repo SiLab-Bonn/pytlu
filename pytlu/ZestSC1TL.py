@@ -9,6 +9,7 @@ import logging
 import os
 
 import ZestSC1 as zest
+
 from basil.TL.SiTransferLayer import SiTransferLayer
 
 
@@ -31,14 +32,11 @@ class ZestSC1Usb(SiTransferLayer):
 
         devices = zest.find_boards()
         logging.info('Found USB board(s): {}'.format(', '.join(('%s with ID %s (Serial no. %s)' % ('ZestSC1', device.get_card_id(), device.get_serial_number())) for device in devices)))
-          
-          
+
         self._dev = devices[0]
         logging.info('Usinng USB board: {}'.format(str(self._dev)))
         self._dev.open_card()
 
-              
-                
         if 'bit_file' in self._init.keys():
             if os.path.exists(self._init['bit_file']):
                 bit_file = self._init['bit_file']
