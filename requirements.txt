@@ -1,0 +1,9 @@
+basil_daq>=2.4.10,<3.0.0
+numpy
+psutil
+qtpy
+#PyQt5
+pyusb
+pyyaml
+pyzmq
+tables
