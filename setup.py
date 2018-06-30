@@ -2,11 +2,13 @@
 
 from setuptools import setup
 from setuptools import find_packages
-from platform import system
 
 import pytlu
 
-version = '0.1.0'
+version = '1.0.0.dev0'
+
+with open('requirements.txt') as f:
+    install_requires = f.read().splitlines()
 
 setup(
     name='pytlu',
@@ -21,19 +23,14 @@ setup(
     maintainer_email='hemeprek@uni-bonn.de',
     packages=find_packages(),
     include_package_data=True,
-    package_data={'': ['README.*'], 'pytlu': ['*.yaml', '*.bit']},
+    install_requires=install_requires,
+    setup_requires=['online_monitor==0.3.1'],
     entry_points={
         'console_scripts': [
             'pytlu = pytlu.tlu:main',
             'pytlu_monitor = pytlu.online_monitor.start_pytlu_online_monitor:main',
         ]
     },
-    setup_requires=['online_monitor==0.3.1'],
-    install_requires=[
-          'basil_daq >= 2.4.10',
-          'online_monitor==0.3.1',
-          'tables'
-    ],
     platforms='any'
 )
 

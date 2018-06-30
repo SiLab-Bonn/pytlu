@@ -12,7 +12,7 @@ The main features of the DAQ software and FPGA firmware are:
 - integrated TDC (1.5625ns resolution, 640 MHz)
 - configurable input inversion
 - configurable input acceptance based on the pulse width
-- trigger acceptance based on input rising distance
+- trigger acceptance based on the distance of the input pulse leading edge
 - continuous data storage of accepted triggers (trigger id, timestamp, TDC)
 - testbench for software and firmware
 - example fpga receiver module : https://github.com/SiLab-Bonn/basil/tree/master/firmware/modules/tlu
@@ -28,12 +28,14 @@ The data of all accepted triggers will be stored in a .h5 file. It contains the 
 
 Install [conda](http://conda.pydata.org).
 
-Install required packages:
+Install dependencies:
 ```bash
-conda install numpy bitarray pyyaml pytables 
+conda install numpy psutil qtpy pyqt pyyaml pyzmq pytables
+pip install pyusb
+pip install 'basil_daq>=2.4.10,<3.0.0'
 ```
 
-Install pytlu via:
+Install pytlu:
 ```bash
 pip install pytlu
 ```
@@ -44,17 +46,17 @@ For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/bl
 If you use the TLU for the first time, you need to add a udev rule in order to set the correct permissions. Create the file `/etc/udev/rules.d/54-tlu.rules` and add the following lines:
 
 ```
-# for Red Hat, e.g. SL5
+# for RedHat, e.g., SL5
 SYSFS{idVendor}=="165d", SYSFS{idProduct}=="0001", GROUP="NOROOTUSB", ←-
 MODE="0666"
 ```
-if you are using a Red Hat-based distribution or:
+if you are using a RedHat-based distribution or:
 ```
-# for Debian
+# for Debian, e.g., Ubuntu
 ACTION=="add", DRIVERS=="?*", ATTR{idVendor}=="165d",
 ATTR{idProduct}=="0001", MODE="0666"
 ```
-in case you are using a debian-based distribution.
+in case you are using a Debian-based distribution.
 
 ## Usage
 
