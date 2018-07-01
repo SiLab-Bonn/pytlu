@@ -1,7 +1,7 @@
 language: python
 python:
   - 2.7
-  
+
 sudo: required
 dist: trusty
 
@@ -11,12 +11,12 @@ before_install:
 
 install:
   - sudo apt-get install -qq libhdf5-serial-dev
-  
-  #- sudo apt-get -y install iverilog-daily  
+
+  #- sudo apt-get -y install iverilog-daily
   - sudo apt-get install gperf
   - git clone https://github.com/steveicarus/iverilog.git
   - cd iverilog && autoconf && ./configure && make && sudo make install && cd ..
-  
+
   # Install conda
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -25,13 +25,13 @@ install:
   - conda install --yes pytest numpy psutil qtpy pyqt pyyaml pyzmq pytables
   - pip install cocotb
   - pip install xvfbwrapper  # fake x server for Qt gui tests
-  
-  # Install basil  
-  - pip install 'basil_daq>=2.4.10,<3.0.0'
 
-  # Install tlu
+  # Install basil
+  - git clone -b v2.4.10 https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
+  #- pip install 'basil_daq>=2.4.10,<3.0.0'
+
+  # Install pytlu
   - python setup.py develop
-  
+
 script:
   - cd tests;  py.test -s
-
