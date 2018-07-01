@@ -27,7 +27,7 @@ install:
   - pip install xvfbwrapper  # fake x server for Qt gui tests
 
   # Install basil
-  - git clone -b v2.4.10 https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
+  - git clone -b v2.4.12 https://github.com/SiLab-Bonn/basil; cd basil; python setup.py develop; cd ..;
   #- pip install 'basil_daq>=2.4.10,<3.0.0'
 
   # Install pytlu
