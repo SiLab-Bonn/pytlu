@@ -30,6 +30,7 @@ module tlu_tx
     input wire [3:0] TRIG_LE,
     input wire [15:0] CONF_TIME_OUT,
     output wire TIME_OUT,
+	 output wire [2:0]STATE_OUT,
     
     input wire TLU_CLOCK, TLU_BUSY,
     output wire TLU_TRIGGER, TLU_RESET
@@ -117,6 +118,7 @@ always@(posedge SYS_CLK)
     TLU_CLOCK_VETO <= TLU_CLOCK_REAL;
     
 assign READY = (state == WAIT_STATE  && TLU_CLOCK_VETO == 0  && WAIT_CNT==0) | !ENABLE;
+assign STATE_OUT = ENABLE? state: 3'b0;
 
 reg [15:0] TIME_OUT_CNT;
 always@(posedge SYS_CLK) begin

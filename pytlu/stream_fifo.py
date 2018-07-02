@@ -1,4 +1,3 @@
-#
 # ------------------------------------------------------------
 # Copyright (c) All rights reserved
 # SiLab, Institute of Physics, University of Bonn
@@ -11,12 +10,12 @@ from basil.HL.RegisterHardwareLayer import RegisterHardwareLayer
 class stream_fifo(RegisterHardwareLayer):
     '''
     '''
-    _registers = {'RESET':      {'descr': {'addr': 0, 'size': 8, 'properties': ['writeonly']}},
-                  'VERSION':    {'descr': {'addr': 0, 'size': 8, 'properties': ['ro']}},
-                  'SET_COUNT':  {'descr': {'addr': 1, 'size': 24}},
-                  'SIZE':       {'descr': {'addr': 4, 'size': 24}},
+    _registers = {'RESET': {'descr': {'addr': 0, 'size': 8, 'properties': ['writeonly']}},
+                  'VERSION': {'descr': {'addr': 0, 'size': 8, 'properties': ['ro']}},
+                  'SET_COUNT': {'descr': {'addr': 1, 'size': 24}},
+                  'SIZE': {'descr': {'addr': 4, 'size': 24}},
                   }
-    
+
     _require_version = "==1"
 
     def __init__(self, intf, conf):
@@ -25,4 +24,3 @@ class stream_fifo(RegisterHardwareLayer):
     def reset(self):
         '''Soft reset the module.'''
         self.RESET = 0
-

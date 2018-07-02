@@ -7,8 +7,10 @@
 
 transfer_layer:
   - name  : intf
-    type  : pytlu.ZestSC1TL    init:
-        bit_file : tlu.bit
+    type  : pytlu.ZestSC1TL
+    init:
+        bit_file : tlu.bit
+
 hw_drivers:
   - name      : gpio
     type      : gpio
@@ -165,4 +167,3 @@ registers:
       - name    : '3'
         size    : 2
         offset  : 9
-        

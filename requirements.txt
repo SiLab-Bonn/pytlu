@@ -1,0 +1,10 @@
+basil_daq>=2.4.10,<3.0.0
+online_monitor==0.3.1
+numpy
+psutil
+qtpy
+#PyQt5
+pyusb
+pyyaml
+pyzmq
+tables

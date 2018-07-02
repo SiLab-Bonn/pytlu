@@ -8,6 +8,7 @@ import datetime
 
 data_iterable = ("data", "timestamp_start", "timestamp_stop", "error")
 
+
 class FifoError(Exception):
     pass
 
@@ -43,8 +44,8 @@ class FifoReadout(object):
         self._is_running = False
         self.reset_sram_fifo()
         self._record_count_lock = Lock()
-        self.set_record_count(0,reset=True)
-        
+        self.set_record_count(0, reset=True)
+
     @property
     def is_running(self):
         return self._is_running
@@ -68,7 +69,7 @@ class FifoReadout(object):
             self._result.get()
         self._calculate.set()
         try:
-            result = self._result.get(timeout=2 * self.readout_interval)
+            result = self._result.get(timeout=self.readout_interval)
         except Empty:
             self._calculate.clear()
             return None
@@ -137,7 +138,6 @@ class FifoReadout(object):
 
     def print_readout_status(self):
         tlu_lost_count = self.get_data_tlu_fifo_lost_count()
-        
         logging.info('Received words: %d', self._record_count)
         logging.info('Data queue size: %d', len(self._data_deque))
         logging.info('SRAM FIFO size: %d', self.dut['stream_fifo']['SIZE'])
@@ -162,7 +162,9 @@ class FifoReadout(object):
                     raise NoDataTimeout('Received no data for %0.1f second(s)' % no_data_timeout)
                 data = self.read_data()
                 self._record_count += len(data)
+                # print self._record_count
             except Exception:
+                logging.warn('Exception occured %s', sys.exc_info()[2])
                 no_data_timeout = None  # raise exception only once
                 if self.errback:
                     self.errback(sys.exc_info())
@@ -175,10 +177,11 @@ class FifoReadout(object):
                 if data_words > 0:
                     last_time, curr_time = self.update_timestamp()
                     status = 0
+                    skip_triggers = self.get_data_tlu_skipped_trigger_count()
                     if self.callback:
-                        self._data_deque.append((data, last_time, curr_time, status))
+                        self._data_deque.append((data, last_time, curr_time, status, skip_triggers))
                     if self.fill_buffer:
-                        self._data_buffer.append((data, last_time, curr_time, status))
+                        self._data_buffer.append((data, last_time, curr_time, status, skip_triggers))
                     self._words_per_read.append(data_words)
                 elif self.stop_readout.is_set():
                     break
@@ -201,7 +204,7 @@ class FifoReadout(object):
             try:
                 data = self._data_deque.popleft()
             except IndexError:
-                self.stop_readout.wait(self.readout_interval)  # sleep a little bit, reducing CPU usage
+                self.stop_readout.wait(self.readout_interval / 2.0)  # sleep a little bit, reducing CPU usage
             else:
                 if data is None:  # if None then exit
                     break
@@ -217,7 +220,7 @@ class FifoReadout(object):
         logging.debug('Starting %s', self.watchdog_thread.name)
         while True:
             try:
-                
+
                 if self.get_data_tlu_fifo_lost_count():
                     raise FifoError('TLU FIFO lost data error(s) detected')
             except Exception:
@@ -237,19 +240,19 @@ class FifoReadout(object):
 
     def read_status(self):
         raise NotImplementedError()
-        
+
     def get_record_count(self):
         self._record_count_lock.acquire()
-        cnt=self._record_count
+        cnt = self._record_count
         self._record_count_lock.release()
         return cnt
-    
-    def set_record_count(self,cnt,reset=False):
+
+    def set_record_count(self, cnt, reset=False):
         self._record_count_lock.acquire()
         if reset:
-            self._record_count=cnt
+            self._record_count = cnt
         else:
-            self._record_count=self._record_count+cnt
+            self._record_count = self._record_count + cnt
         self._record_count_lock.release()
 
     def reset_sram_fifo(self):
@@ -262,15 +265,15 @@ class FifoReadout(object):
         if fifo_size != 0:
             logging.warning('SRAM FIFO not empty after reset: size = %i', fifo_size)
 
-
     def get_data_tlu_fifo_lost_count(self, channels=None):
         return self.dut['tlu_master'].LOST_DATA_CNT
-        
+
+    def get_data_tlu_skipped_trigger_count(self):
+        return self.dut['tlu_master'].SKIP_TRIG_COUNTER
+
     def get_float_time(self):
         '''returns time as double precision floats - Time64 in pytables - mapping to and from python datetime's
-
         '''
         t1 = time()
         t2 = datetime.datetime.fromtimestamp(t1)
         return mktime(t2.timetuple()) + 1e-6 * t2.microsecond
-    
