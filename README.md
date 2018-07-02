@@ -24,6 +24,12 @@ The data of all accepted triggers will be stored in a .h5 file. It contains the 
 - trigger id (32 bit number)
 - distance between leading edge of input pulse and generation of trigger signal for each input channel (each of them 8 bit numbers)
 
+
+## Online Monitor
+
+The pytlu online monitor displays the trigger rate vs. time.
+![Pytlu online monitor](img/online_monitor.png)
+
 ## Installation
 
 Install [conda](http://conda.pydata.org).
@@ -39,6 +45,8 @@ Install pytlu:
 ```bash
 pip install pytlu
 ```
+
+Install libusb library by following this [guide](https://silab-redmine.physik.uni-bonn.de/projects/pysilibusb/wiki).
 
 For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
 
