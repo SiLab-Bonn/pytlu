@@ -117,7 +117,10 @@ localparam FIFO_HIGHADDR = 32'hf200-1;
 
 localparam TDC_BASEADDR = 32'hf200;
 localparam TDC_HIGHADDR = 32'hf300 - 1;
-    
+
+localparam PULSE_VETO_BASEADDR = 32'hf300;
+localparam PULSE_VETO_HIGHADDR = 32'hf400 - 1;
+
 localparam FIFO_BASEADDR_DATA = 32'h8000_0000;
 localparam FIFO_HIGHADDR_DATA = 32'h9000_0000;
         
@@ -179,7 +182,7 @@ tlu_controller #(
     .FIFO_PREEMPT_REQ(),
     
     .TRIGGER({7'b0, DUT_TRIGGER[0]}),
-    .TRIGGER_VETO({7'b0, 1'b1}),
+    .TRIGGER_VETO({7'b0, VETO_PULSE}),
     
     .TLU_TRIGGER(DUT_TRIGGER[0]),
     .TLU_RESET(DUT_RESET[0]),
@@ -281,6 +284,26 @@ bram_fifo
     .FIFO_READ_ERROR()
     );
     
+
+// ----- Veto signal pulser ----- //
+wire VETO_PULSE;
+pulse_gen
+#(
+    .BASEADDR(PULSE_VETO_BASEADDR),
+    .HIGHADDR(PULSE_VETO_HIGHADDR)
+) i_pulse_gen
+(
+    .BUS_CLK(BUS_CLK),
+    .BUS_RST(BUS_RST),
+    .BUS_ADD(BUS_ADD),
+    .BUS_DATA(BUS_DATA),
+    .BUS_RD(BUS_RD),
+    .BUS_WR(BUS_WR),
+
+    .PULSE_CLK(dut.CLK40),
+    .EXT_START(1'b0),
+    .PULSE(VETO_PULSE)
+	);
 
 //cy1472 cy1472( .d(SRAM_DATA), .clk(SRAM_CLK), .a(SRAM_ADD[21:0]), .bws(SRAM_BW_N), 
 //            .we_b(SRAM_WE_N), .adv_lb(SRAM_ADV_LD_N), .ce1b(1'b0), .ce2(1'b1), 

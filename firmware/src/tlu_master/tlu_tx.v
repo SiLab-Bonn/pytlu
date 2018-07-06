@@ -82,6 +82,9 @@ always@(posedge CLK160)
 
 assign TLU_CLOCK_REAL = TLU_CLOCK_FF[4:3] == 2'b00 && TLU_CLOCK_FF[2:1] == 2'b11; //This is bad but seem to help for some cross-talk
 
+wire TLU_CLOCK_HIGH;
+assign TLU_CLOCK_HIGH = TLU_CLOCK_FF[4:1] == 4'b1111;
+
 reg [31:0] TRIG_ID_SR;
 initial TRIG_ID_SR = 0;
 //always@(posedge TLU_CLOCK_REAL or posedge TRIG_FF)
@@ -115,7 +118,7 @@ assign TLU_RESET = INV_OUT ? 1'b0 : 1'b0;
 
 reg TLU_CLOCK_VETO;
 always@(posedge SYS_CLK)
-    TLU_CLOCK_VETO <= TLU_CLOCK_REAL;
+    TLU_CLOCK_VETO <= TLU_CLOCK_HIGH;
     
 assign READY = (state == WAIT_STATE  && TLU_CLOCK_VETO == 0  && WAIT_CNT==0) | !ENABLE;
 assign STATE_OUT = ENABLE? state: 3'b0;
