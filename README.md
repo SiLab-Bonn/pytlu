@@ -1,4 +1,4 @@
-# pytlu
+﻿# pytlu
 
 [![Build Status](https://travis-ci.org/SiLab-Bonn/pytlu.svg?branch=master)](https://travis-ci.org/SiLab-Bonn/pytlu)
 
@@ -28,7 +28,7 @@ The data of all accepted triggers will be stored in a .h5 file. It contains the 
 ## Online Monitor
 
 The pytlu online monitor displays the trigger rate vs. time.
-![Pytlu online monitor](img/online_monitor.png)
+![Pytlu online monitor](online_monitor.png)
 
 ## Installation
 
