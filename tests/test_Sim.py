@@ -338,7 +338,7 @@ class TestSim(unittest.TestCase):
         self.dut['TLU_TB'].EN_TLU_VETO = 1  # enable TLU veto
         self.dut['TLU_TB'].TRIGGER_ENABLE = 1
         self.dut['TLU_TB'].TRIGGER_DATA_DELAY = 2
-        self.dut['TLU_TB'].HANDSHAKE_BUSY_VETO_WAIT_CYCLES = 0
+        self.dut['TLU_TB'].HANDSHAKE_BUSY_VETO_WAIT_CYCLES = 0  # be directly after de-asserting BUSY ready for incoming vetos
         self.dut['TLU_TB'].TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES = 1
 
         self.dut['tlu_master'].EN_INPUT = 1
@@ -354,17 +354,16 @@ class TestSim(unittest.TestCase):
         self.dut['VETO_PULSER_TB'].REPEAT = how_many_vetos
         self.dut['VETO_PULSER_TB'].START
 
-        # generate scintillator injections
         how_many_triggers = 50
         self.dut['test_pulser'].DELAY = 200
-        self.dut['test_pulser'].WIDTH = 10
+        self.dut['test_pulser'].WIDTH = 1
         self.dut['test_pulser'].REPEAT = how_many_triggers
         self.dut['test_pulser'].START
 
         while not self.dut['test_pulser'].is_ready:
             pass
 
-        expected_vetoed_triggers = 27  # 27 triggers will not be accepted due to veto signal
+        expected_vetoed_triggers = 29  # 29 triggers will not be accepted due to veto signal
         self.check_data(how_many_triggers - expected_vetoed_triggers)
 
     def tearDown(self):
