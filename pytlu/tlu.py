@@ -56,7 +56,7 @@ class Tlu(Dut):
                                          ('timestamp_start', 'f8'), ('timestamp_stop', 'f8'), ('error', 'u4'),
                                          ('skipped_triggers', 'u8')])
 
-        self.run_name = time.strftime("tlu_%Y%m%d_%H%M%S")
+        self.run_name = time.strftime("%Y%m%d_%H%M%S_tlu")
         self.output_filename = self.run_name
         self._first_read = False
 
