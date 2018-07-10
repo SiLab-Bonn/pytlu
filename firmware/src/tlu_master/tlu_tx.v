@@ -92,7 +92,7 @@ integer n;
 always@(posedge CLK160)
     if(TRIG_FF)
         TRIG_ID_SR <= {TRIG_ID, 1'b0};
-    else if (TLU_CLOCK_REAL)
+    else if (TLU_CLOCK_REAL & BUSY_REAL)
 		// This loop basically does: TRIG_ID_SR <= {(32 - N_BITS_TRIGGER_ID)'b0, TRIG_ID_SR[N_BITS_TRIGGER_ID:1]}
 		for (n = 0; n < 31; n = n + 1)
 			if (n < N_BITS_TRIGGER_ID)
