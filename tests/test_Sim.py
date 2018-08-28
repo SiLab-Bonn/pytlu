@@ -32,6 +32,7 @@ class TestSim(unittest.TestCase):
         cnfg['hw_drivers'].append({'name': 'TLU_TB', 'type': 'tlu', 'interface': 'intf', 'base_addr': 0xf000})
         cnfg['hw_drivers'].append({'name': 'FIFO_TB', 'type': 'bram_fifo', 'interface': 'intf', 'base_addr': 0xf100, 'base_data_addr': 0x80000000})
         cnfg['hw_drivers'].append({'name': 'TDC_TB', 'type': 'tdc_s3', 'interface': 'intf', 'base_addr': 0xf200})
+        cnfg['hw_drivers'].append({'name': 'VETO_PULSER_TB', 'type': 'pulse_gen', 'interface': 'intf', 'base_addr': 0xf300})
 
         seq_tracks = [{'name': 'T0', 'position': 0}, {'name': 'T1', 'position': 1}, {'name': 'T2', 'position': 2}, {'name': 'T3', 'position': 3}]
         cnfg['registers'].append({'name': 'SEQ_TB', 'type': 'TrackRegister', 'hw_driver': 'SEQ_GEN_TB', 'seq_width': 8, 'seq_size': 8 * 1024, 'tracks': seq_tracks})
@@ -196,10 +197,13 @@ class TestSim(unittest.TestCase):
 
         ret = self.dut['FIFO_TB'].get_data()
 
+        # check number of received triggers
         self.assertEqual(ret.size, how_many * (tdc_en + 1))
 
         tlu_word = ret >> 31 == 1
         exp_tlu = np.arange(0x80000000, 0x80000000 + how_many, dtype=np.uint32)
+
+        # check if received trigger words from FIFO are correct
         self.assertEqual(ret[tlu_word].tolist(), exp_tlu.tolist())
 
         # distance is 0x71
@@ -325,6 +329,42 @@ class TestSim(unittest.TestCase):
                 pass
 
         self.assertEqual(self.dut.fifo_readout.get_record_count(), how_many)
+
+    def test_tlu_veto(self):
+        self.dut['TLU_TB'].TRIGGER_COUNTER = 0
+        self.dut['TLU_TB'].TRIGGER_MODE = 3
+        self.dut['TLU_TB'].TRIGGER_SELECT = 0
+        self.dut['TLU_TB'].TRIGGER_VETO_SELECT = 1  # veto on veto pulse
+        self.dut['TLU_TB'].EN_TLU_VETO = 1  # enable TLU veto
+        self.dut['TLU_TB'].TRIGGER_ENABLE = 1
+        self.dut['TLU_TB'].TRIGGER_DATA_DELAY = 2
+        self.dut['TLU_TB'].HANDSHAKE_BUSY_VETO_WAIT_CYCLES = 0  # be directly after de-asserting BUSY ready for incoming vetos
+        self.dut['TLU_TB'].TRIGGER_HANDSHAKE_ACCEPT_WAIT_CYCLES = 1
+
+        self.dut['tlu_master'].EN_INPUT = 1
+        self.dut['tlu_master'].MAX_DISTANCE = 10
+        self.dut['tlu_master'].THRESHOLD = 1
+        self.dut['tlu_master'].EN_OUTPUT = 1
+
+        # generate veto signals
+        how_many_vetos = 80
+        distance_veto = 80
+        self.dut['VETO_PULSER_TB'].DELAY = distance_veto - 1
+        self.dut['VETO_PULSER_TB'].WIDTH = 100
+        self.dut['VETO_PULSER_TB'].REPEAT = how_many_vetos
+        self.dut['VETO_PULSER_TB'].START
+
+        how_many_triggers = 50
+        self.dut['test_pulser'].DELAY = 200
+        self.dut['test_pulser'].WIDTH = 1
+        self.dut['test_pulser'].REPEAT = how_many_triggers
+        self.dut['test_pulser'].START
+
+        while not self.dut['test_pulser'].is_ready:
+            pass
+
+        expected_vetoed_triggers = 29  # 29 triggers will not be accepted due to veto signal
+        self.check_data(how_many_triggers - expected_vetoed_triggers)
 
     def tearDown(self):
         self.dut.close()
