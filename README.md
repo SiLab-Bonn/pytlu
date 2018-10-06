@@ -54,9 +54,8 @@ For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/bl
 If you use the TLU for the first time, you need to add a udev rule in order to set the correct permissions. Create the file `/etc/udev/rules.d/54-tlu.rules` and add the following lines:
 
 ```
-# for RedHat, e.g., SL5
-SYSFS{idVendor}=="165d", SYSFS{idProduct}=="0001", GROUP="NOROOTUSB", ←-
-MODE="0666"
+# for RHEL 7 based (e.g. SL7/Centos 7):
+ATTR{idVendor}=="165d", ATTR{idProduct}=="0001", GROUP="NOROOTUSB", MODE="0666"
 ```
 if you are using a RedHat-based distribution or:
 ```
