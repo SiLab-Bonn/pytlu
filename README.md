@@ -8,7 +8,7 @@ DAQ software and firmware for the [Trigger Logic Unit (TLU)](https://twiki.cern.
 
 The main features of the DAQ software and FPGA firmware are:
 
-- protocol compatible with original firmware 
+- protocol compatible with original firmware
 - integrated TDC (1.5625ns resolution, 640 MHz)
 - configurable input inversion
 - configurable input acceptance based on the pulse width
@@ -46,7 +46,7 @@ Install pytlu:
 pip install pytlu
 ```
 
-Install libusb library by following this [guide](https://silab-redmine.physik.uni-bonn.de/projects/pysilibusb/wiki).
+Install libusb library by following this [guide](https://github.com/SiLab-Bonn/pySiLibUSB/wiki).
 
 For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
 
