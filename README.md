@@ -51,19 +51,15 @@ Install libusb library by following this [guide](https://github.com/SiLab-Bonn/p
 For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
 
 
-If you use the TLU for the first time, you need to add a udev rule in order to set the correct permissions. Create the file `/etc/udev/rules.d/54-tlu.rules` and add the following lines:
-
+If you are using the TLU for the first time, you need to add a permanent udev rule in order to access the TLU. Create the file `/etc/udev/rules.d/tlu.rules` and add the following lines.
+For a RedHat-based distribution (e.g., SL7/Centos 7) use:
 ```
-# for RHEL 7 based (e.g. SL7/Centos 7):
-ATTR{idVendor}=="165d", ATTR{idProduct}=="0001", GROUP="NOROOTUSB", MODE="0666"
+SUBSYSTEM=="usb", ATTR{idVendor}=="165d", ATTR{idProduct}=="0001", GROUP="NOROOTUSB", MODE="0666"
 ```
-if you are using a RedHat-based distribution or:
+OR for a Debian-based distribution (e.g., Ubuntu) use:
 ```
-# for Debian, e.g., Ubuntu
-ACTION=="add", DRIVERS=="?*", ATTR{idVendor}=="165d",
-ATTR{idProduct}=="0001", MODE="0666"
+SUBSYSTEM=="usb", ATTR{idVendor}=="165d", ATTR{idProduct}=="0001", MODE="0666"
 ```
-in case you are using a Debian-based distribution.
 
 ## Usage
 
