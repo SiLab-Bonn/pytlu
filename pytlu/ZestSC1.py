@@ -106,13 +106,60 @@ def modify_bitfile_image(bitfile):
     return ret
 
 
-class Board:
+class TluDevice:
     # device is not None if usb.core.find() does not find any boards
     def __init__(self, device=None):
-        self.dev = device
         self._lock = Lock()
+        self.dev = device
+        self.dev.set_configuration()
 
-        device.set_configuration()
+    @classmethod
+    def from_board_sn(cls, board_sn):
+        usb_devices = usb.core.find(find_all=True, idVendor=ID_VENDOR, idProduct=ID_PRODUCT)
+        if usb_devices is None:
+            raise ValueError('No device found')
+
+        boards = []
+        for usb_device in usb_devices:
+            try:
+                tlu_device = cls(device=usb_device)
+            except usb.core.USBError:
+                pass
+            else:
+                try:
+                    curr_board_sn = tlu_device.board_sn
+                except usb.core.USBError:
+                    pass
+                else:
+                    if curr_board_sn == board_sn:
+                        usb_device.append(usb_device)
+                usb_device.dispose()
+        if not boards:
+            raise ValueError('No device found with SN %d' % board_sn)
+        elif len(boards) > 1:
+            raise ValueError('Found %d devices with SN %d' % (len(boards), board_sn))
+        else:
+            return boards[0]
+
+    @property
+    def fpga_type(self):
+        return self.get_fpga_type()
+
+    @property
+    def card_id(self):
+        return self.get_card_id()
+
+    @property
+    def board_sn(self):
+        return self.get_serial_number()
+
+    @property
+    def memory_size(self):
+        return self.get_memory_size()
+
+    @property
+    def fw_version(self):
+        return self.get_firmware_version()
 
     def read_eeprom(self, address):
         return self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
@@ -262,9 +309,9 @@ class Board:
 
 # find_all=True: devs is not None if no boards are found, so it's pointless to
 # check if any boards were found
-# find_all=False: dev is None if no board is found
+# find_all=False: dev is None if no TLU is found
 # the usb backend can be changed if required
-def find_boards():
+def find_tlu_devices():
     # backend = usb.backend.libusb1.get_backend(find_library=lambda x:
     #                                           "/usr/lib/libusb-1.0.so")
     # devs = usb.core.find(find_all=True,
@@ -276,4 +323,4 @@ def find_boards():
                          idVendor=ID_VENDOR,
                          idProduct=ID_PRODUCT)
 
-    return [Board(device=dev) for dev in devs]
+    return [TluDevice(device=dev) for dev in devs]
