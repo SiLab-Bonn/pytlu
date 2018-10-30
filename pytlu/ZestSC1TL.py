@@ -31,7 +31,7 @@ class ZestSC1Usb(SiTransferLayer):
         super(ZestSC1Usb, self).init()
         self._init.setdefault('board_sn', None)
         if self._init['board_sn'] and self._init['board_sn'] >= 0:
-            self._sidev = TluDevice.from_board_sn(self._init['board_sn'])
+            self._dev = TluDevice.from_board_sn(self._init['board_sn'])
         else:
             # search for any available device
             devices = find_tlu_devices()
@@ -41,7 +41,7 @@ class ZestSC1Usb(SiTransferLayer):
                 logging.info('Found TLU(s): {}'.format(', '.join(('%s with ID %s (Serial no. %s)' % ('ZestSC1', device.get_card_id(), device.get_serial_number())) for device in devices)))
                 if len(devices) > 1:
                     raise ValueError('Found %d TLUs. Please specify "board_sn"' % len(devices))
-                self._sidev = devices[0]
+                self._dev = devices[0]
 
         logging.info('Using TLU: {}'.format(str(self._dev)))
         self._dev.open_card()
