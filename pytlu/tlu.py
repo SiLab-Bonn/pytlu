@@ -42,12 +42,12 @@ class Tlu(Dut):
     PCA9555 = {'DIR': 6, 'OUT': 2}
     IP_SEL = {'RJ45': 0b11, 'LEMO': 0b10}
 
-    def __init__(self, conf=None, output_folder=None, log_file=None, data_file=None, monitor_addr=None):
+    def __init__(self, conf=None, output_folder=None, log_file=None, data_file=None, monitor_addr=None,callback=None):
 
         if conf is None:
             conf = os.path.dirname(os.path.abspath(__file__)) + os.sep + "tlu.yaml"
         logging.info("Loading configuration file from %s" % conf)
-
+        self.callback = callback
         self.data_dtype = np.dtype([('le0', 'u1'), ('le1', 'u1'), ('le2', 'u1'),
                                     ('le3', 'u1'), ('time_stamp', 'u8'), ('trigger_id', 'u4')])
         self.meta_data_dtype = np.dtype([('index_start', 'u4'), ('index_stop', 'u4'), ('data_length', 'u4'),
@@ -57,6 +57,7 @@ class Tlu(Dut):
         self.run_name = time.strftime("%Y%m%d_%H%M%S_tlu")
         self.output_filename = self.run_name
         self._first_read = False
+        self._init_readout=False
 
         if output_folder:
             self.output_folder = output_folder
@@ -176,20 +177,32 @@ class Tlu(Dut):
         else:
             return np.array([], dtype=self.data_dtype)
             # return np.empty([], dtype=np.uint8)
+    def set_RunNumber(self,nr):
+        try:
+            self.h5_file.close()
+        except Exception:
+            pass
+        self.run_name = time.strftime("%Y%m%d_%H%M%S_tlu")+"_run_%05d"%nr
+        self.output_filename = self.run_name
+        self._first_read = False
+        self.log_file = os.path.join(self.output_folder, self.output_filename + ".log")
+        self.data_file = os.path.join(self.output_folder, self.output_filename + ".h5")
 
     @contextmanager
     def readout(self, *args, **kwargs):
         if not self._first_read:
-            self.filter_data = tb.Filters(complib='blosc', complevel=5)
-            self.filter_tables = tb.Filters(complib='zlib', complevel=5)
+            filter_data = tb.Filters(complib='blosc', complevel=5)
+            filter_tables = tb.Filters(complib='zlib', complevel=5)
             self.h5_file = tb.open_file(self.data_file, mode='w', title='TLU')
-            self.data_table = self.h5_file.create_table(self.h5_file.root, name='raw_data', description=self.data_dtype, title='data', filters=self.filter_data)
-            self.meta_data_table = self.h5_file.create_table(self.h5_file.root, name='meta_data', description=self.meta_data_dtype, title='meta_data', filters=self.filter_tables)
+            self.data_table = self.h5_file.create_table(self.h5_file.root, name='raw_data', description=self.data_dtype, title='data', filters=filter_data)
+            self.meta_data_table = self.h5_file.create_table(self.h5_file.root, name='meta_data', description=self.meta_data_dtype, title='meta_data', filters=filter_tables)
             self.meta_data_table.attrs.kwargs = yaml.dump(kwargs)
-
+            self._first_read = True
+        if not self._init_readout:
             self.fifo_readout = FifoReadout(self)
             self.fifo_readout.print_readout_status()
-            self._first_read = True
+            self._init_readout = True
+
 
         self.fifo_readout.start(callback=self.handle_data,
                                 errback=self.handle_err)
@@ -222,7 +235,7 @@ class Tlu(Dut):
 
         total_words = self.data_table.nrows
 
-        # print data_tuple[0]
+        print data_tuple
 
         self.data_table.append(data_tuple[0])
         self.data_table.flush()
@@ -238,7 +251,9 @@ class Tlu(Dut):
         self.meta_data_table.row['index_stop'] = total_words
         self.meta_data_table.row.append()
         self.meta_data_table.flush()
-
+        #Call user supplied data handling:
+        if self.callback is not None:
+            self.callback(data_tuple)
         # sending data to online monitor
         if self.socket is not None:
             try:
