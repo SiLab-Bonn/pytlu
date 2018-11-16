@@ -5,7 +5,9 @@ from setuptools import find_packages
 
 import pytlu
 
-version = '1.0.0.dev0'
+f = open('VERSION', 'r')
+version = f.readline().strip()
+f.close()
 
 with open('requirements.txt') as f:
     install_requires = f.read().splitlines()
@@ -13,7 +15,7 @@ with open('requirements.txt') as f:
 setup(
     name='pytlu',
     version=version,
-    description='DAQ for TLU',
+    description='DAQ for EUDAQ TLU',
     url='https://github.com/SiLab-Bonn/pytlu',
     license='',
     long_description='',
