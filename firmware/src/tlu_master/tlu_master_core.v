@@ -1,6 +1,6 @@
 /**
  * ------------------------------------------------------------
- * Copyright (c) All rights reserved 
+ * Copyright (c) All rights reserved
  * SiLab, Institute of Physics, University of Bonn
  * ------------------------------------------------------------
  */
@@ -14,9 +14,9 @@ module tlu_master_core
     input wire CLK320,
     input wire CLK160,
     input wire CLK40,
-    
+
     input wire TEST_PULSE,
-    output wire [5:0] DUT_TRIGGER, DUT_RESET, 
+    output wire [5:0] DUT_TRIGGER, DUT_RESET,
     input  wire [5:0] DUT_BUSY, DUT_CLOCK,
     input  wire [3:0] BEAM_TRIGGER,
 
@@ -31,17 +31,17 @@ module tlu_master_core
     input wire BUS_RST,
     input wire BUS_WR,
     input wire BUS_RD
-    
+
 );
 
 localparam VERSION = 2;
 
 wire SOFT_RST, START;
-assign SOFT_RST = (BUS_ADD==0 && BUS_WR); 
+assign SOFT_RST = (BUS_ADD==0 && BUS_WR);
 assign START = (BUS_ADD==1 && BUS_WR);
-    
+
 wire RST;
-assign RST = BUS_RST | SOFT_RST; 
+assign RST = BUS_RST | SOFT_RST;
 
 reg [7:0] status_regs[9:0];
 
@@ -50,7 +50,7 @@ wire [3:0] CONF_EN_INPUT;
 assign CONF_EN_INPUT = status_regs[3][3:0];
 wire [3:0] CONF_INPUT_INVERT;
 assign CONF_INPUT_INVERT = status_regs[3][7:4];
-    
+
 wire [4:0] CONF_MAX_LE_DISTANCE;
 assign CONF_MAX_LE_DISTANCE = status_regs[4][4:0];
 wire [4:0] CONF_DIG_TH_INPUT;
@@ -66,15 +66,15 @@ wire [15:0] CONF_TIME_OUT;
 assign CONF_TIME_OUT = {status_regs[8], status_regs[7]};
 
 wire [2:0] TX_STATE[5:0];
-    
+
 reg [63:0] TIME_STAMP;
 reg [31:0] TRIG_ID;
-    
-reg [7:0] LOST_DATA_CNT; 
-reg [63:0] TIME_STAMP_BUF; 
+
+reg [7:0] LOST_DATA_CNT;
+reg [63:0] TIME_STAMP_BUF;
 reg [31:0] TRIG_ID_BUF;
 reg [31:0] SKIP_TRIG_COUNTER_BUF;
-    
+
 always @(posedge BUS_CLK) begin
     if(RST) begin
         status_regs[0] <= 8'b0;
@@ -97,7 +97,7 @@ always @(posedge BUS_CLK) begin
         if (BUS_ADD == 0)
             BUS_DATA_OUT <= VERSION;
         else if(BUS_ADD == 1)
-            BUS_DATA_OUT <= {7'b0, CONF_DONE}; 
+            BUS_DATA_OUT <= {7'b0, CONF_DONE};
         else if(BUS_ADD == 2)
             BUS_DATA_OUT <= {8'b0}; //TODO: MODE;
         else if(BUS_ADD == 3)
@@ -114,7 +114,6 @@ always @(posedge BUS_CLK) begin
             BUS_DATA_OUT <= CONF_TIME_OUT[15:8];
         else if(BUS_ADD == 9)
             BUS_DATA_OUT <= {3'b0, CONF_N_BITS_TRIGGER_ID};
-         
         else if(BUS_ADD == 16)
             BUS_DATA_OUT <= TIME_STAMP[7:0];
         else if(BUS_ADD == 17)
@@ -189,9 +188,9 @@ wire START_SYNC;
 cdc_pulse_sync start_pulse_sync (.clk_in(BUS_CLK), .pulse_in(START), .clk_out(CLK40), .pulse_out(START_SYNC));
 
 
-wire [7:0] LAST_RISING_REL [3:0]; 
+wire [7:0] LAST_RISING_REL [3:0];
 wire [3:0] VALID;
-    
+
 always@(posedge CLK40)
     if(RST_SYNC || START_SYNC)
         TIME_STAMP <= 1;
@@ -201,30 +200,30 @@ always@(posedge CLK40)
 genvar ch;
 generate
 for (ch = 0; ch < 4; ch = ch + 1) begin: tlu_ch
-    
+
     tlu_ch_rx tlu_ch_rx (
         .RST(RST_SYNC),
-        
+
         .CLK320(CLK320),
         .CLK160(CLK160),
         .CLK40(CLK40),
         .TIME_STAMP(TIME_STAMP[3:0]),
-        
+
         .EN_INVERT(CONF_INPUT_INVERT[ch]),
         .TLU_IN(BEAM_TRIGGER[ch]),
-        
+
         .DIG_TH(CONF_DIG_TH_INPUT),
         .EN(CONF_EN_INPUT[ch]),
-        
+
         .VALID(VALID[ch]),
-        .LAST_RISING(), 
-        .LAST_FALLING(), 
+        .LAST_RISING(),
+        .LAST_FALLING(),
         .LAST_TOT(),
         .LAST_RISING_REL(LAST_RISING_REL[ch])
     );
 end
-endgenerate 
-    
+endgenerate
+
 reg [7:0] MIN_LE;
 integer imin;
 
@@ -280,49 +279,45 @@ always@(posedge CLK40)
 reg [31:0] TRIG_ID_FF;
 always@(posedge CLK40)
     TRIG_ID_FF <= TRIG_ID;
-        
+
 localparam INV_OUT = 6'b101010;
 wire [5:0] TIME_OUT;
 genvar dut_ch;
 generate
 for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
-    tlu_tx 
-        #(
-            .INV_OUT(INV_OUT[dut_ch])
-        ) 
-        tlu_tx( 
-            .SYS_CLK(CLK40), 
-            .CLK320(CLK320),
-            .CLK160(CLK160),
-            
-            .TRIG_LE(MAX_LE[3:0]), 
-            .SYS_RST(RST_SYNC), 
-            .ENABLE(CONF_EN_OUTPUT[dut_ch]), 
-            .TRIG(GEN_TRIG_PULSE),
-            .TRIG_ID(TRIG_ID_FF[30:0]),
-			.N_BITS_TRIGGER_ID(CONF_N_BITS_TRIGGER_ID),
-            .READY(READY[dut_ch]),
-            .CONF_TIME_OUT(CONF_TIME_OUT),
-            .TIME_OUT(TIME_OUT[dut_ch]),
-				.STATE_OUT(TX_STATE[dut_ch]),
-            
-            .TLU_CLOCK(DUT_CLOCK[dut_ch]), .TLU_BUSY(DUT_BUSY[dut_ch]),
-            .TLU_TRIGGER(DUT_TRIGGER[dut_ch]), .TLU_RESET(DUT_RESET[dut_ch])
-        );
+    tlu_tx #(
+        .INV_OUT(INV_OUT[dut_ch])
+    ) tlu_tx (
+        .SYS_CLK(CLK40),
+        .CLK320(CLK320),
+        .CLK160(CLK160),
+        .TRIG_LE(MAX_LE[3:0]),
+        .SYS_RST(RST_SYNC),
+        .ENABLE(CONF_EN_OUTPUT[dut_ch]),
+        .TRIG(GEN_TRIG_PULSE),
+        .TRIG_ID(TRIG_ID_FF[30:0]),
+		.N_BITS_TRIGGER_ID(CONF_N_BITS_TRIGGER_ID),
+        .READY(READY[dut_ch]),
+        .CONF_TIME_OUT(CONF_TIME_OUT),
+        .TIME_OUT(TIME_OUT[dut_ch]),
+		.STATE_OUT(TX_STATE[dut_ch]),
+        .TLU_CLOCK(DUT_CLOCK[dut_ch]), .TLU_BUSY(DUT_BUSY[dut_ch]),
+        .TLU_TRIGGER(DUT_TRIGGER[dut_ch]), .TLU_RESET(DUT_RESET[dut_ch])
+    );
 end
-endgenerate 
+endgenerate
 
 always@(posedge CLK40)
     if(RST_SYNC | START_SYNC)
         TIMEOUT_COUNTER <= 0;
     else if( (|TIME_OUT) & TIMEOUT_COUNTER!=8'hff )
         TIMEOUT_COUNTER <= TIMEOUT_COUNTER + 1;
-    
+
 wire cdc_wfull;
 wire [127:0] cdc_data;
 wire fifo_full, cdc_fifo_empty;
 wire cdc_fifo_write;
-    
+
 always@(posedge CLK40) begin
     if(RST_SYNC)
         LOST_DATA_CNT <= 0;
@@ -356,7 +351,7 @@ wire out_fifo_read;
 wire [127:0] out_fifo_data_out;
 wire out_fifo_empty;
 gerneric_fifo #(.DATA_SIZE(128), .DEPTH(64))  gerneric_fifo
-( 
+(
     .clk(BUS_CLK), .reset(RST),
     .write(!cdc_fifo_empty),
     .read(out_fifo_read),
@@ -374,22 +369,22 @@ always@(posedge BUS_CLK)
         out_word_cnt <= 0;
     else if (FIFO_READ)
         out_word_cnt <= out_word_cnt + 1;
-    
+
 reg [127:0] fifo_data_out_buf;
 always@(posedge BUS_CLK)
     if(out_fifo_read)
         fifo_data_out_buf <= out_fifo_data_out;
-        
+
 wire [15:0]  fifo_data_out_word [7:0];
-    
-    
+
+
 genvar iw;
 generate
     assign fifo_data_out_word[0] = out_fifo_data_out[15:0];
     for (iw = 1; iw < 8; iw = iw + 1) begin: gen_out
          assign fifo_data_out_word[iw] = fifo_data_out_buf[(iw+1)*16-1:iw*16];
     end
-endgenerate 
+endgenerate
 
 assign FIFO_DATA = fifo_data_out_word[out_word_cnt];
 assign FIFO_EMPTY = out_word_cnt==0 & out_fifo_empty;
