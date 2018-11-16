@@ -130,7 +130,7 @@ assign BUS_WR = !BUS_WR_N && !BUS_CS_N;
 assign BUS_ADD = USB_BUS_ADD - 16'h2000;
 
 // -------  MODULE ADDRESSES ------- //
-localparam VERSION = 8'h04;
+localparam VERSION = 8'h05;
 
 localparam GPIO_BASEADDR = 16'h3000;
 localparam GPIO_HIGHADDR = 16'h4000-1;

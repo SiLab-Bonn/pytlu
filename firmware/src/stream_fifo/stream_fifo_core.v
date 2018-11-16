@@ -39,7 +39,7 @@ module stream_fifo_core
 
 );
 
-localparam VERSION = 1;
+localparam VERSION = 2;
 
 wire SOFT_RST, LOCKED;
 assign SOFT_RST = (BUS_ADD==0 && BUS_WR);
@@ -47,10 +47,10 @@ assign SOFT_RST = (BUS_ADD==0 && BUS_WR);
 wire RST;
 assign RST = BUS_RST | SOFT_RST | !LOCKED;
 
-wire [23:0] CONF_SIZE_BYTE; // write data count in units of bytes
-reg [22:0] CONF_SIZE; // in units of 2 bytes (16 bit)
+wire [19:0] CONF_SIZE_BYTE; // write data count in units of bytes
+reg [18:0] CONF_SIZE; // in units of 2 bytes (16 bit)
 assign CONF_SIZE_BYTE = CONF_SIZE * 2;
-reg [23:0] CONF_SIZE_BYTE_BUF;
+reg [11:0] CONF_SIZE_BYTE_BUF;
 
 reg [7:0] status_regs[3:0];
 
@@ -87,9 +87,9 @@ always @ (posedge BUS_CLK) begin //(*) begin
         else if(BUS_ADD == 4)
             BUS_DATA_OUT <= CONF_SIZE_BYTE[7:0]; // in units of bytes
         else if(BUS_ADD == 5)
-            BUS_DATA_OUT <= CONF_SIZE_BYTE_BUF[15:8];
+            BUS_DATA_OUT <= CONF_SIZE_BYTE_BUF[7:0];
         else if(BUS_ADD == 6)
-            BUS_DATA_OUT <= CONF_SIZE_BYTE_BUF[22:16];
+            BUS_DATA_OUT <= {4'b0, CONF_SIZE_BYTE_BUF[11:8]};
         else
             BUS_DATA_OUT <= 8'b0;
     end
@@ -97,8 +97,10 @@ end
 
 always @ (posedge BUS_CLK)
 begin
-    if (BUS_ADD == 4 && BUS_RD)
-        CONF_SIZE_BYTE_BUF <= CONF_SIZE_BYTE;
+    if (RST)
+        CONF_SIZE_BYTE_BUF <= 0;
+    else if (BUS_ADD == 4 && BUS_RD)
+        CONF_SIZE_BYTE_BUF <= CONF_SIZE_BYTE[19:8];
 end
 
 wire U1_CLK0;
@@ -234,9 +236,23 @@ reg [18:0] sram_size_stream;
 always @ (posedge STREAM_CLK)
     sram_size_stream <= sram_addr_wr - sram_addr_rd;
 
-//TODO:This should be synchronized clock-domain-crossing, IT IS WRONG LIKE THIS
-always @ (posedge BUS_CLK)
-    CONF_SIZE <= sram_size_stream;
+reg [18:0] sram_size_gray;
+always@(posedge STREAM_CLK)
+    sram_size_gray <=  (sram_size_stream>>1) ^ sram_size_stream;
+
+reg [18:0] sram_size_gray_cdc0, sram_size_gray_cdc1;
+always@(posedge BUS_CLK) begin
+    sram_size_gray_cdc0 <= sram_size_gray;
+    sram_size_gray_cdc1 <= sram_size_gray_cdc0;
+end
+
+integer gbi;
+always@(*) begin
+    CONF_SIZE[18] = sram_size_gray_cdc1[18];
+    for(gbi = 17; gbi >= 0; gbi = gbi - 1) begin
+        CONF_SIZE[gbi] = sram_size_gray_cdc1[gbi] ^ CONF_SIZE[gbi + 1];
+    end
+end
 
 wire stream_data_valid;
 wire [15:0] sram_data_out;

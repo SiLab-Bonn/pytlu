@@ -34,7 +34,8 @@ class tlu_master(RegisterHardwareLayer):
                   'LOST_DATA_CNT': {'descr': {'addr': 33, 'size': 8, 'properties': ['ro']}},
                   'TX_STATE': {'descr': {'addr': 34, 'size': 24, 'properties': ['ro']}},
                   }
-    _require_version = "==2"
+
+    _require_version = "==3"
 
     def __init__(self, intf, conf):
         super(tlu_master, self).__init__(intf, conf)

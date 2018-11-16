@@ -34,7 +34,7 @@ module tlu_master_core
 
 );
 
-localparam VERSION = 2;
+localparam VERSION = 3;
 
 wire SOFT_RST, START;
 assign SOFT_RST = (BUS_ADD==0 && BUS_WR);
@@ -45,7 +45,6 @@ assign RST = BUS_RST | SOFT_RST;
 
 reg [7:0] status_regs[9:0];
 
-wire CONF_DONE;
 wire [3:0] CONF_EN_INPUT;
 assign CONF_EN_INPUT = status_regs[3][3:0];
 wire [3:0] CONF_INPUT_INVERT;
@@ -59,7 +58,7 @@ wire [4:0] CONF_N_BITS_TRIGGER_ID;
 assign CONF_N_BITS_TRIGGER_ID = status_regs[9][4:0];
 wire [5:0] CONF_EN_OUTPUT;
 assign CONF_EN_OUTPUT = status_regs[6][5:0];
-reg [31:0] SKIP_TRIG_COUNTER;
+reg [31:0] SKIP_TRIG_COUNTER, SKIP_TRIG_COUNTER_SYNC;
 reg [7:0] TIMEOUT_COUNTER;
 
 wire [15:0] CONF_TIME_OUT;
@@ -67,13 +66,13 @@ assign CONF_TIME_OUT = {status_regs[8], status_regs[7]};
 
 wire [2:0] TX_STATE[5:0];
 
-reg [63:0] TIME_STAMP;
-reg [31:0] TRIG_ID;
+reg [63:0] TIME_STAMP, TIME_STAMP_SYNC;
+reg [31:0] TRIG_ID, TRIG_ID_SYNC;
 
 reg [7:0] LOST_DATA_CNT;
-reg [63:0] TIME_STAMP_BUF;
-reg [31:0] TRIG_ID_BUF;
-reg [31:0] SKIP_TRIG_COUNTER_BUF;
+reg [63-8:0] TIME_STAMP_BUF;
+reg [31-8:0] TRIG_ID_BUF;
+reg [31-8:0] SKIP_TRIG_COUNTER_BUF;
 
 always @(posedge BUS_CLK) begin
     if(RST) begin
@@ -97,9 +96,9 @@ always @(posedge BUS_CLK) begin
         if (BUS_ADD == 0)
             BUS_DATA_OUT <= VERSION;
         else if(BUS_ADD == 1)
-            BUS_DATA_OUT <= {7'b0, CONF_DONE};
+            BUS_DATA_OUT <= {8'b0}; // start
         else if(BUS_ADD == 2)
-            BUS_DATA_OUT <= {8'b0}; //TODO: MODE;
+            BUS_DATA_OUT <= {8'b0}; // not used, TODO: MODE
         else if(BUS_ADD == 3)
             BUS_DATA_OUT <= {CONF_INPUT_INVERT, CONF_EN_INPUT};
         else if(BUS_ADD == 4)
@@ -117,35 +116,35 @@ always @(posedge BUS_CLK) begin
         else if(BUS_ADD == 16)
             BUS_DATA_OUT <= TIME_STAMP[7:0];
         else if(BUS_ADD == 17)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[15:8];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[7:0];
         else if(BUS_ADD == 18)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[23:16];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[15:8];
         else if(BUS_ADD == 19)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[31:24];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[23:16];
         else if(BUS_ADD == 20)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[39:32];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[31:24];
         else if(BUS_ADD == 21)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[47:40];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[39:32];
         else if(BUS_ADD == 22)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[55:48];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[47:40];
         else if(BUS_ADD == 23)
-            BUS_DATA_OUT <= TIME_STAMP_BUF[63:56];
+            BUS_DATA_OUT <= TIME_STAMP_BUF[55:48];
         else if(BUS_ADD == 24)
             BUS_DATA_OUT <= TRIG_ID[7:0];
         else if(BUS_ADD == 25)
-            BUS_DATA_OUT <= TRIG_ID_BUF[15:8];
+            BUS_DATA_OUT <= TRIG_ID_BUF[7:0];
         else if(BUS_ADD == 26)
-            BUS_DATA_OUT <= TRIG_ID_BUF[23:16];
+            BUS_DATA_OUT <= TRIG_ID_BUF[15:8];
         else if(BUS_ADD == 27)
-            BUS_DATA_OUT <= TRIG_ID_BUF[31:24];
+            BUS_DATA_OUT <= TRIG_ID_BUF[23:16];
         else if(BUS_ADD == 28)
             BUS_DATA_OUT <= SKIP_TRIG_COUNTER[7:0];
         else if(BUS_ADD == 29)
-            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[15:8];
+            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[7:0];
         else if(BUS_ADD == 30)
-            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[23:16];
+            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[15:8];
         else if(BUS_ADD == 31)
-            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[31:24];
+            BUS_DATA_OUT <= SKIP_TRIG_COUNTER_BUF[23:16];
         else if(BUS_ADD == 32)
             BUS_DATA_OUT <= TIMEOUT_COUNTER;
         else if(BUS_ADD == 33)
@@ -161,25 +160,85 @@ always @(posedge BUS_CLK) begin
     end
 end
 
-//TODO: THIS SHULD BE GRAY CODED ETC.... for CDC
-always @ (posedge BUS_CLK) begin
+// Gray-code for CDC
+always @ (posedge BUS_CLK)
+begin
     if (RST)
-        TIME_STAMP_BUF <= 32'b0;
+        TIME_STAMP_BUF <= 0;
     else if (BUS_ADD == 16 && BUS_RD)
-            TIME_STAMP_BUF <= TIME_STAMP;
+        TIME_STAMP_BUF <= TIME_STAMP[63:8];
 end
-always @ (posedge BUS_CLK) begin
+
+reg [63:0] time_stamp_gray;
+always@(posedge CLK40)
+    time_stamp_gray <=  (TIME_STAMP_SYNC>>1) ^ TIME_STAMP_SYNC;
+
+reg [63:0] time_stamp_gray_cdc0, time_stamp_gray_cdc1;
+always@(posedge BUS_CLK) begin
+    time_stamp_gray_cdc0 <= time_stamp_gray;
+    time_stamp_gray_cdc1 <= time_stamp_gray_cdc0;
+end
+
+integer gbi_ts;
+always@(*) begin
+    TIME_STAMP[63] = time_stamp_gray_cdc1[63];
+    for(gbi_ts = 62; gbi_ts >= 0; gbi_ts = gbi_ts - 1) begin
+        TIME_STAMP[gbi_ts] = time_stamp_gray_cdc1[gbi_ts] ^ TIME_STAMP[gbi_ts + 1];
+    end
+end
+
+always @ (posedge BUS_CLK)
+begin
     if (RST)
-        TRIG_ID_BUF <= 32'b0;
+        TRIG_ID_BUF <= 0;
     else if (BUS_ADD == 24 && BUS_RD)
-            TRIG_ID_BUF <= TRIG_ID;
+        TRIG_ID_BUF <= TRIG_ID[31:8];
 end
-always @ (posedge BUS_CLK) begin
+
+reg [31:0] trigger_id_gray;
+always@(posedge CLK40)
+    trigger_id_gray <=  (TRIG_ID_SYNC>>1) ^ TRIG_ID_SYNC;
+
+reg [31:0] trigger_id_gray_cdc0, trigger_id_gray_cdc1;
+always@(posedge BUS_CLK) begin
+    trigger_id_gray_cdc0 <= trigger_id_gray;
+    trigger_id_gray_cdc1 <= trigger_id_gray_cdc0;
+end
+
+integer gbi_id;
+always@(*) begin
+    TRIG_ID[31] = trigger_id_gray_cdc1[31];
+    for(gbi_id = 30; gbi_id >= 0; gbi_id = gbi_id - 1) begin
+        TRIG_ID[gbi_id] = trigger_id_gray_cdc1[gbi_id] ^ TRIG_ID[gbi_id + 1];
+    end
+end
+
+always @ (posedge BUS_CLK)
+begin
     if (RST)
-        SKIP_TRIG_COUNTER_BUF <= 32'b0;
+        SKIP_TRIG_COUNTER_BUF <= 0;
     else if (BUS_ADD == 28 && BUS_RD)
-            SKIP_TRIG_COUNTER_BUF <= SKIP_TRIG_COUNTER;
+        SKIP_TRIG_COUNTER_BUF <= SKIP_TRIG_COUNTER[31:8];
 end
+
+reg [31:0] skip_trigger_gray;
+always@(posedge CLK40)
+    skip_trigger_gray <=  (SKIP_TRIG_COUNTER_SYNC>>1) ^ SKIP_TRIG_COUNTER_SYNC;
+
+reg [31:0] skip_trigger_gray_cdc0, skip_trigger_gray_cdc1;
+always@(posedge BUS_CLK) begin
+    skip_trigger_gray_cdc0 <= skip_trigger_gray;
+    skip_trigger_gray_cdc1 <= skip_trigger_gray_cdc0;
+end
+
+integer gbi_skip;
+always@(*) begin
+    SKIP_TRIG_COUNTER[31] = skip_trigger_gray_cdc1[31];
+    for(gbi_skip = 30; gbi_skip >= 0; gbi_skip = gbi_skip - 1) begin
+        SKIP_TRIG_COUNTER[gbi_skip] = skip_trigger_gray_cdc1[gbi_skip] ^ SKIP_TRIG_COUNTER[gbi_skip + 1];
+    end
+end
+
 
 wire RST_SYNC;
 cdc_reset_sync rst_pulse_sync (.clk_in(BUS_CLK), .pulse_in(RST), .clk_out(CLK40), .pulse_out(RST_SYNC));
@@ -193,9 +252,9 @@ wire [3:0] VALID;
 
 always@(posedge CLK40)
     if(RST_SYNC || START_SYNC)
-        TIME_STAMP <= 1;
-    else if(TIME_STAMP != 64'hffffffff_ffffffff)
-        TIME_STAMP <= TIME_STAMP + 1;
+        TIME_STAMP_SYNC <= 1;
+    else if(TIME_STAMP_SYNC != 64'hffffffff_ffffffff)
+        TIME_STAMP_SYNC <= TIME_STAMP_SYNC + 1;
 
 genvar ch;
 generate
@@ -207,7 +266,7 @@ for (ch = 0; ch < 4; ch = ch + 1) begin: tlu_ch
         .CLK320(CLK320),
         .CLK160(CLK160),
         .CLK40(CLK40),
-        .TIME_STAMP(TIME_STAMP[3:0]),
+        .TIME_STAMP(TIME_STAMP_SYNC[3:0]),
 
         .EN_INVERT(CONF_INPUT_INVERT[ch]),
         .TLU_IN(BEAM_TRIGGER[ch]),
@@ -265,20 +324,20 @@ wire SKIP_TRIGGER = TRIG_PULSE & !GEN_TRIG_PULSE;
 
 always@(posedge CLK40)
     if(RST_SYNC | START_SYNC)
-        SKIP_TRIG_COUNTER <= 0;
-    else if(SKIP_TRIGGER)  // let overflow.. & SKIP_TRIG_COUNTER!=32'hffffffff )
-        SKIP_TRIG_COUNTER <= SKIP_TRIG_COUNTER + 1;
+        SKIP_TRIG_COUNTER_SYNC <= 0;
+    else if(SKIP_TRIGGER)  // let overflow.. & SKIP_TRIG_COUNTER_SYNC!=32'hffffffff )
+        SKIP_TRIG_COUNTER_SYNC <= SKIP_TRIG_COUNTER_SYNC + 1;
 
 
 always@(posedge CLK40)
     if(RST_SYNC | START_SYNC)
-        TRIG_ID <= 0; //32'h3fff-10;
+        TRIG_ID_SYNC <= 0; //32'h3fff-10;
     else if(GEN_TRIG_PULSE)
-        TRIG_ID <= TRIG_ID + 1;
+        TRIG_ID_SYNC <= TRIG_ID_SYNC + 1;
 
-reg [31:0] TRIG_ID_FF;
+reg [31:0] TRIG_ID_SYNC_FF;
 always@(posedge CLK40)
-    TRIG_ID_FF <= TRIG_ID;
+    TRIG_ID_SYNC_FF <= TRIG_ID_SYNC;
 
 localparam INV_OUT = 6'b101010;
 wire [5:0] TIME_OUT;
@@ -295,8 +354,8 @@ for (dut_ch = 0; dut_ch < 6; dut_ch = dut_ch + 1) begin: dut_ch_tx
         .SYS_RST(RST_SYNC),
         .ENABLE(CONF_EN_OUTPUT[dut_ch]),
         .TRIG(GEN_TRIG_PULSE),
-        .TRIG_ID(TRIG_ID_FF[30:0]),
-		.N_BITS_TRIGGER_ID(CONF_N_BITS_TRIGGER_ID),
+        .TRIG_ID(TRIG_ID_SYNC_FF[30:0]),
+        .N_BITS_TRIGGER_ID(CONF_N_BITS_TRIGGER_ID),
         .READY(READY[dut_ch]),
         .CONF_TIME_OUT(CONF_TIME_OUT),
         .TIME_OUT(TIME_OUT[dut_ch]),
@@ -333,7 +392,7 @@ assign LE[2] = CONF_EN_INPUT[2] ? LAST_RISING_REL[2] + 8'd43 : 0;
 assign LE[3] = CONF_EN_INPUT[3] ? LAST_RISING_REL[3] + 8'd43 : 0;
 
 ///TODO: add some status? Lost count? Skipped triggers?
-assign cdc_data = {TRIG_ID, TIME_STAMP, LE[3], LE[2], LE[1], LE[0]};
+assign cdc_data = {TRIG_ID_SYNC, TIME_STAMP_SYNC, LE[3], LE[2], LE[1], LE[0]};
 assign cdc_fifo_write = GEN_TRIG_PULSE;
 
 wire [127:0] cdc_data_out;
