@@ -37,8 +37,6 @@ def handle_sig(signum, frame):
 
 
 class Tlu(Dut):
-
-    VERSION = 4
     I2C_MUX = {'DISPLAY': 0, 'LEMO': 1, 'HDMI': 2, 'MB': 3}
     I2C_ADDR = {'LED': 0x40, 'TRIGGER_EN': 0x42, 'RESET_EN': 0x44, 'IPSEL': 0x46}
     PCA9555 = {'DIR': 6, 'OUT': 2}
@@ -105,8 +103,8 @@ class Tlu(Dut):
 
         fw_version = self['intf'].read(0x2000, 1)[0]
         logging.info("TLU firmware version: %s" % (fw_version))
-        if fw_version != self.VERSION:
-            raise Exception("TLU firmware version does not satisfy version requirements (read: %s, require: %s)" % (fw_version, self.VERSION))
+        if int(self.version) != fw_version:
+            raise Exception("TLU firmware version does not match DUT configuration file (read: %s, require: %s)" % (fw_version, int(self.version)))
 
         # Who know why this is needed but other way first bytes are mising
         # every secount time?
