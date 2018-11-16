@@ -35,7 +35,7 @@ def handle_sig(signum, frame):
     global stop_run
     stop_run = True
 
-
+from usb.core import USBError
 class Tlu(Dut):
     I2C_MUX = {'DISPLAY': 0, 'LEMO': 1, 'HDMI': 2, 'MB': 3}
     I2C_ADDR = {'LED': 0x40, 'TRIGGER_EN': 0x42, 'RESET_EN': 0x44, 'IPSEL': 0x46}
@@ -109,11 +109,22 @@ class Tlu(Dut):
 
         # Who know why this is needed but other way first bytes are mising
         # every secount time?
+        #try:
         self['stream_fifo'].SET_COUNT = 8 * 512
         self['intf'].read(0x0001000000000000, 8 * 512)
+        #except USBError as e:
+        #    root_logger.warn("Error during init" + e.message)
+        #    initerror = True
+
+
+
         self['tlu_master'].get_configuration()
 
         self.write_i2c_config()
+
+
+
+
 
     def write_i2c_config(self):
         self.write_rj45_leds()
@@ -166,22 +177,30 @@ class Tlu(Dut):
 
     def get_fifo_data(self):
         stream_fifo_size = self['stream_fifo'].SIZE
+
         if stream_fifo_size >= 16:
-            how_much_read = (stream_fifo_size / 512 + 1) * 512
+            how_much_read = (stream_fifo_size / 512 + 2) * 512
+            # how_much_read =  8 * 512
             self['stream_fifo'].SET_COUNT = how_much_read
             ret = self['intf'].read(0x0001000000000000, how_much_read)
+
             retint = np.frombuffer(ret, dtype=self.data_dtype)
+            size1 = retint.shape[0]
             retint = retint[retint['time_stamp'] > 0]
+            size2 = retint.shape[0]
+            check = retint["trigger_id"]
+            
+            if np.any(np.diff(check)<1):
+                print "Issue with trigger_ID"
+
+            #print "get_fifo_data stream_fifo_size", stream_fifo_size, "ret.shape", len(ret),"how_much_read",how_much_read,"size1",size1, "size2",size2
             return retint
             # return ret
         else:
             return np.array([], dtype=self.data_dtype)
             # return np.empty([], dtype=np.uint8)
     def set_RunNumber(self,nr):
-        try:
-            self.h5_file.close()
-        except Exception:
-            pass
+
         self.run_name = time.strftime("%Y%m%d_%H%M%S_tlu")+"_run_%05d"%nr
         self.output_filename = self.run_name
         self._first_read = False
@@ -193,6 +212,10 @@ class Tlu(Dut):
         if not self._first_read:
             filter_data = tb.Filters(complib='blosc', complevel=5)
             filter_tables = tb.Filters(complib='zlib', complevel=5)
+            try:
+                self.h5_file.close()
+            except Exception:
+                pass
             self.h5_file = tb.open_file(self.data_file, mode='w', title='TLU')
             self.data_table = self.h5_file.create_table(self.h5_file.root, name='raw_data', description=self.data_dtype, title='data', filters=filter_data)
             self.meta_data_table = self.h5_file.create_table(self.h5_file.root, name='meta_data', description=self.meta_data_dtype, title='meta_data', filters=filter_tables)
@@ -234,8 +257,6 @@ class Tlu(Dut):
         '''
 
         total_words = self.data_table.nrows
-
-        print data_tuple
 
         self.data_table.append(data_tuple[0])
         self.data_table.flush()

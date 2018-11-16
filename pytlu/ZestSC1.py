@@ -179,14 +179,14 @@ class TluDevice:
 
     def get_firmware_version(self):
         return np.array(self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
-                                               REQUEST['firmware'], 0, 0, 3)[0:3:], timeout=1000)
+                                               REQUEST['firmware'], 0, 0, 3, timeout=1000)[0:3:])
 
     def __str__(self):
         return str({'card_id': '{}'.format(self.get_card_id()),
                     'fpga_type': '{}'.format(self.get_fpga_type()),
                     'serial_number': ' {}'.format(self.get_serial_number()),
                     'memory_size': '{}'.format(self.get_memory_size()),
-                    # 'firmware_version': '{}?'.format(self.get_firmware_version())
+                    'firmware_version': '{}?'.format(self.get_firmware_version())
                     })
 
     def _reset_8051(self):
