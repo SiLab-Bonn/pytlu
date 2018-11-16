@@ -1,9 +1,10 @@
 /**
  * ------------------------------------------------------------
- * Copyright (c) All rights reserved 
+ * Copyright (c) All rights reserved
  * SiLab, Institute of Physics, University of Bonn
  * ------------------------------------------------------------
  */
+
 `timescale 1ps/1ps
 `default_nettype none
 
@@ -27,7 +28,7 @@ module stream_fifo #(
     output wire [1:0] SRAM_BW_N,
     output wire SRAM_OE_N,
     output wire SRAM_WE_N,
-    
+
     output wire FIFO_READ_NEXT_OUT,
     input wire FIFO_EMPTY_IN,
     input wire [15:0] FIFO_DATA,
@@ -36,8 +37,6 @@ module stream_fifo #(
     input wire STREAM_READY,
     output wire STREAM_WRITE_N,
     output wire [15:0] STREAM_DATA
-    
-
 );
 
 wire IP_RD, IP_WR;
@@ -61,8 +60,8 @@ bus_to_ip #(
     .IP_DATA_IN(IP_DATA_IN),
     .IP_DATA_OUT(IP_DATA_OUT)
     );
-    
-    
+
+
 stream_fifo_core #(
     .ABUSWIDTH(ABUSWIDTH)
 ) stream_fifo_core (
@@ -81,16 +80,16 @@ stream_fifo_core #(
     .SRAM_BW_N(SRAM_BW_N),
     .SRAM_OE_N(SRAM_OE_N),
     .SRAM_WE_N(SRAM_WE_N),
-    
+
     .FIFO_READ_NEXT_OUT(FIFO_READ_NEXT_OUT),
     .FIFO_EMPTY_IN(FIFO_EMPTY_IN),
     .FIFO_DATA(FIFO_DATA),
-    
+
     .USB_STREAM_CLK(STREAM_CLK),
     .STREAM_READY(STREAM_READY),
     .STREAM_WRITE_N(STREAM_WRITE_N),
     .STREAM_DATA(STREAM_DATA)
-    
+
 );
 
 endmodule
