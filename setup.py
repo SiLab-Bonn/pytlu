@@ -5,9 +5,8 @@ from setuptools import find_packages
 
 import pytlu
 
-f = open('VERSION', 'r')
-version = f.readline().strip()
-f.close()
+with open('VERSION') as version_file:
+    version = version_file.read().strip()
 
 with open('requirements.txt') as f:
     install_requires = f.read().splitlines()
@@ -19,9 +18,9 @@ setup(
     url='https://github.com/SiLab-Bonn/pytlu',
     license='',
     long_description='',
-    author='Janek Fleper, Tomasz Hemperek, Yannick Dieter',
+    author='Janek Fleper, Tomasz Hemperek, Yannick Dieter, Jens Janssen',
     maintainer='Tomasz Hemperek',
-    author_email='j.fleper@gmx.de, hemeprek@uni-bonn.de, dieter@physik.uni-bonn.de',
+    author_email='j.fleper@gmx.de, hemeprek@uni-bonn.de, dieter@physik.uni-bonn.de, janssen@physik.uni-bonn.de',
     maintainer_email='hemeprek@uni-bonn.de',
     packages=find_packages(),
     include_package_data=True,
