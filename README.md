@@ -8,21 +8,21 @@ DAQ software and firmware for the EUDAQ [Trigger Logic Unit (TLU)](https://twiki
 
 The main features of the DAQ software and FPGA firmware are:
 
-- protocol compatible with original firmware
-- integrated TDC (1.5625ns resolution, 640 MHz)
-- configurable input inversion
-- configurable input acceptance based on the pulse width
-- trigger acceptance based on the distance of the input pulse leading edge
-- continuous data storage of accepted triggers (trigger id, timestamp, TDC)
-- testbench for software and firmware
-- example fpga receiver module : https://github.com/SiLab-Bonn/basil/tree/master/firmware/modules/tlu
-- data monitoring via [online monitor](https://github.com/SiLab-Bonn/online_monitor)
+- Protocol compatible with original EUDAQ TLU firmware
+- Integrated TDC (1.5625ns resolution, 640 MHz)
+- Configurable input inversion
+- Configurable input acceptance based on the pulse width
+- Trigger acceptance based on the distance of the input pulse leading edge
+- Continuous data storage of accepted triggers (trigger ID, timestamp, TDC)
+- Testbench for software and firmware
+- Example FPGA receiver module: https://github.com/SiLab-Bonn/basil/tree/master/firmware/modules/tlu
+- Data monitoring via [online monitor](https://github.com/SiLab-Bonn/online_monitor)
 
-The data of all accepted triggers will be stored in a .h5 file. It contains the following data:
+The data of all accepted triggers will be stored in a HDF5/PyTables file. It contains the following data:
 
-- timestamp of the trigger (64 bit number, 40 MHz)
-- trigger id (32 bit number)
-- distance between leading edge of input pulse and generation of trigger signal for each input channel (each of them 8 bit numbers)
+- Timestamp of the trigger (64-bit number, 40 MHz)
+- Trigger ID (32-bit number)
+- Distance between leading edge of input pulse and generation of trigger signal for each input channel (each of them 8-bit numbers)
 
 
 ## Online Monitor
@@ -32,24 +32,30 @@ The pytlu online monitor displays the trigger rate vs. time.
 
 ## Installation
 
-Install [conda](http://conda.pydata.org).
+Installation of [Anaconda Python](https://www.anaconda.com/download) or [Miniconda Python](https://conda.io/miniconda.html) is recommended.
 
 Install dependencies:
 ```bash
 conda install numpy psutil qtpy pyqt pyyaml pyzmq pytables
-pip install pyusb
+pip install pyusb pySiLibUSB
 pip install 'basil_daq>=2.4.10,<3.0.0'
 ```
 
-Install pytlu:
+Install pytlu from PyPI:
 ```bash
 pip install pytlu
 ```
 
-Install libusb library by following this [guide](https://github.com/SiLab-Bonn/pySiLibUSB/wiki).
+OR install pytlu from sources:
+```bash
+python setup.py develop
+```
 
 For development/testing see [.travis.yml](https://github.com/SiLab-Bonn/pytlu/blob/master/.travis.yml) for details.
 
+### USB Driver
+
+Install libusb library by following the pySiLibUSB [installation guide](https://github.com/SiLab-Bonn/pySiLibUSB/wiki).
 
 If you are using the TLU for the first time, you need to add a permanent udev rule in order to access the TLU. Create the file `/etc/udev/rules.d/tlu.rules` and add the following lines.
 For a RedHat-based distribution (e.g., SL7/Centos 7) use:
