@@ -16,7 +16,7 @@ The main features of the DAQ software and FPGA firmware are:
 - Continuous data storage of accepted triggers (trigger ID, timestamp, TDC)
 - Testbench for software and firmware
 - Example FPGA receiver module: https://github.com/SiLab-Bonn/basil/tree/master/firmware/modules/tlu
-- Data monitoring via [online monitor](https://github.com/SiLab-Bonn/online_monitor)
+- Data monitoring provided by the [online_monitor](https://github.com/SiLab-Bonn/online_monitor) package
 
 The data of all accepted triggers will be stored in a HDF5/PyTables file. It contains the following data:
 
