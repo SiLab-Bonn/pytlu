@@ -2,7 +2,7 @@ import logging
 from time import sleep, time, mktime
 from threading import Thread, Event, Lock
 from collections import deque
-from Queue import Queue, Empty
+from queue import Queue, Empty
 import sys
 import datetime
 
@@ -220,7 +220,6 @@ class FifoReadout(object):
         logging.debug('Starting %s', self.watchdog_thread.name)
         while True:
             try:
-
                 if self.get_data_tlu_fifo_lost_count():
                     raise FifoError('TLU FIFO lost data error(s) detected')
             except Exception:

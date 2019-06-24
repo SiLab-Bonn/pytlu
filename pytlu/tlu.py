@@ -166,7 +166,7 @@ class Tlu(Dut):
     def get_fifo_data(self):
         stream_fifo_size = self['stream_fifo'].SIZE
         if stream_fifo_size >= 16:
-            how_much_read = (stream_fifo_size / 512 + 1) * 512
+            how_much_read = (stream_fifo_size // 512 + 1) * 512
             self['stream_fifo'].SET_COUNT = how_much_read
             ret = self['intf'].read(0x0001000000000000, how_much_read)
             retint = np.frombuffer(ret, dtype=self.data_dtype)
@@ -317,7 +317,7 @@ def main():
 
     for oe in args.output_enable:
         no = oe[-1]
-        if no < 4:
+        if oe in output_ch[:4]:  # TODO: why is this needed
             chip['I2C_IP_SEL'][no] = chip.IP_SEL['RJ45'] if oe[0] == 'C' else chip.IP_SEL['LEMO']
 
     chip.write_i2c_config()
