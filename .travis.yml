@@ -35,4 +35,6 @@ install:
   - python setup.py develop
 
 script:
-  - cd tests;  py.test -s
+  - conda activate  # to link properly to pytest
+  - cd tests
+  - pytest -s
