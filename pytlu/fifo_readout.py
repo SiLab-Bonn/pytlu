@@ -2,7 +2,10 @@ import logging
 from time import sleep, time, mktime
 from threading import Thread, Event, Lock
 from collections import deque
-from queue import Queue, Empty
+try:
+    from queue import Queue, Empty  # Python3
+except ImportError:
+    from Queue import Queue, Empty  # Python2
 import sys
 import datetime
 
