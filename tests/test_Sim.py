@@ -19,7 +19,7 @@ from pytlu.tlu import Tlu
 class TestSim(unittest.TestCase):
     def setUp(self):
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        print root_dir
+        print(root_dir)
         cocotb_compile_and_run(
             sim_bus="StreamDriver",
             sim_files=[root_dir + '/tests/tb.v'],
@@ -171,7 +171,7 @@ class TestSim(unittest.TestCase):
             ret = self.dut['FIFO_TB'].get_data()
 
             # for k,w in enumerate(ret):
-            #    print k, hex(w)
+            #    print(k, hex(w))
 
             self.assertEqual(ret.size, exp[i] * 2)
 
