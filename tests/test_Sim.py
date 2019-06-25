@@ -117,7 +117,7 @@ class TestSim(unittest.TestCase):
         self.dut['tlu_master'].EN_OUTPUT = 1
         self.dut['tlu_master'].N_BITS_TRIGGER_ID = 15
         # self.dut['tlu_master'].TIMEOUT = 3
-        
+
         how_many = 50
         self.dut['test_pulser'].DELAY = 200
         self.dut['test_pulser'].WIDTH = 10
@@ -210,7 +210,7 @@ class TestSim(unittest.TestCase):
         if tdc_en:
             exp_tdc = np.array([135] * how_many, dtype=np.uint32)
             ret_tdc = ret[~tlu_word] >> 20
-            self.assertEqual((ret_tdc / 2).tolist(), (exp_tdc / 2).tolist())
+            self.assertEqual((ret_tdc // 2).tolist(), (exp_tdc // 2).tolist())
 
         self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
         self.assertEqual(self.dut['tlu_master'].TIMEOUT_COUNTER, 0)
@@ -241,8 +241,8 @@ class TestSim(unittest.TestCase):
 
         ret_fifo = self.dut.get_fifo_data()
         self.assertEqual(ret.size, how_many)
-        self.assertEqual(range(how_many), ret_fifo['trigger_id'].tolist())
-        self.assertEqual(range(ret_fifo['time_stamp'][0], int(ret_fifo['time_stamp'][0]) + how_many * distance, distance), ret_fifo['time_stamp'].tolist())
+        self.assertEqual(list(range(how_many)), ret_fifo['trigger_id'].tolist())
+        self.assertEqual(list(range(ret_fifo['time_stamp'][0], int(ret_fifo['time_stamp'][0]) + how_many * distance, distance)), ret_fifo['time_stamp'].tolist())
 
         self.assertEqual(self.dut['tlu_master'].TRIGGER_ID, how_many)
         self.assertEqual(self.dut['tlu_master'].TIMEOUT_COUNTER, 255 if how_many > 255 else how_many)
