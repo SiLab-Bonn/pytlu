@@ -19,12 +19,13 @@ install:
   - cd iverilog && autoconf && ./configure && make && sudo make install && cd ..
 
   # Install conda
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH=$HOME/miniconda/bin:$PATH
   - conda update --yes conda
-  - conda install --yes pytest numpy psutil qtpy pyqt pyyaml pyzmq pytables
-  - pip install cocotb
+  - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION pytest numpy psutil qtpy pyqt pyyaml pyzmq pytables
+  - source activate test-environment
+  - pip install cocotb=1.0.dev3
   - pip install xvfbwrapper  # fake x server for Qt gui tests
 
   # Install basil
@@ -35,8 +36,9 @@ install:
   - python setup.py develop
 
 script:
-  - conda init bash  # https://github.com/ContinuumIO/docker-images/issues/89
-  - source ~/.bashrc  # since ==> For changes to take effect, close and re-open your current shell. <==
-  - conda activate  # to link properly to pytest
+  #- conda init bash  # https://github.com/ContinuumIO/docker-images/issues/89
+  #- source ~/.bashrc  # since ==> For changes to take effect, close and re-open your current shell. <==
+  #- conda activate  # to link properly to pytest
   - cd tests
+  - python --version
   - pytest -s
