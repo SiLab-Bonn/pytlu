@@ -36,9 +36,6 @@ install:
   - python setup.py develop
 
 script:
-  #- conda init bash  # https://github.com/ContinuumIO/docker-images/issues/89
-  #- source ~/.bashrc  # since ==> For changes to take effect, close and re-open your current shell. <==
-  #- conda activate  # to link properly to pytest
   - cd tests
   - python --version
   - pytest -s
