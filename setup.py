@@ -25,7 +25,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,
-    setup_requires=['online_monitor>=0.4.0<0.5'],
+    setup_requires=['online_monitor>=0.4.1<0.5'],
     entry_points={
         'console_scripts': [
             'pytlu = pytlu.tlu:main',
