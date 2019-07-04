@@ -80,8 +80,9 @@ class PyTLU(Receiver):
                       'trigger_rate_real': self.trigger_rate_real_curve}
         self.plot_delay = 0
 
-    def deserialze_data(self, data):
-        return jsonapi.loads(data, object_hook=utils.json_numpy_obj_hook)
+    def deserialize_data(self, data):
+        datar, meta = utils.simple_dec(data)
+        return meta
 
     def handle_data_if_active(self, data):
         # look for TLU data in data stream

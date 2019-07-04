@@ -172,10 +172,10 @@ class TluDevice:
         return self.read_eeprom(EEPROM['card_id'])[2]
 
     def get_serial_number(self):
-        return struct.unpack('>I', ''.join([chr(self.read_eeprom(EEPROM['serial_number'] + i)[2]) for i in range(4)]))[0]
+        return struct.unpack('>I', bytearray(''.join([chr(self.read_eeprom(EEPROM['serial_number'] + i)[2]) for i in range(4)]), 'utf-8'))[0]
 
     def get_memory_size(self):
-        return struct.unpack('>I', ''.join([chr(self.read_eeprom(EEPROM['memory_size'] + i)[2]) for i in range(4)]))[0]
+        return struct.unpack('>I', bytearray(''.join([chr(self.read_eeprom(EEPROM['memory_size'] + i)[2]) for i in range(4)]), 'utf-8'))[0]
 
     def get_firmware_version(self):
         return np.array(self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
@@ -206,7 +206,8 @@ class TluDevice:
                 logger.debug('write_register: {}'.format(ret))
 
     def read_register(self, index, length):
-        ret = array.array('B', '\x00' * length)
+        ret = array.array('B')
+        ret.frombytes(('\x00' * length).encode())
         with self._lock:
             for i in range(length):
                 ctrl_ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],

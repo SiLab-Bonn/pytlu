@@ -47,7 +47,7 @@ class PyTLU(Transceiver):
         self.n_readouts = 0
         self.skipped_trigger_counter_old = 0  # variable needed to calcualte actual trigger counter
 
-    def deserialze_data(self, data):  # According to pyBAR data serilization
+    def deserialize_data(self, data):
         try:
             self.meta_data = jsonapi.loads(data)
         except ValueError:
@@ -56,7 +56,7 @@ class PyTLU(Transceiver):
                 shape = self.meta_data.pop('shape')
                 if self.meta_data:
                     try:
-                        raw_data_array = np.frombuffer(buffer(data), dtype=dtype).reshape(shape)
+                        raw_data_array = np.frombuffer(data, dtype=dtype).reshape(shape)
                         return raw_data_array
                     except (KeyError, ValueError, TypeError):  # KeyError happens if meta data read is omitted; ValueError if np.frombuffer fails due to wrong sha
                         return None
@@ -119,8 +119,8 @@ class PyTLU(Transceiver):
                 self.update_time_indices['trigger_rate_real'] = 0
                 self.readouts = 0
 
-    def serialze_data(self, data):
-        return jsonapi.dumps(data, cls=utils.NumpyEncoder)
+    def serialize_data(self, data):
+        return utils.simple_enc(None, data)
 
     def handle_command(self, command):
         # received signal is 'ACTIVETAB tab' where tab is the name (str) of the selected tab in online monitor
