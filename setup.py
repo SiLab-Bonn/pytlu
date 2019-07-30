@@ -29,6 +29,7 @@ setup(
     entry_points={
         'console_scripts': [
             'pytlu = pytlu.tlu:main',
+            'pytlu_eudaq = pytlu.tlu_eudaq:main',
             'pytlu_monitor = pytlu.online_monitor.start_pytlu_online_monitor:main',
         ]
     },
