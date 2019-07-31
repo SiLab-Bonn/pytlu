@@ -78,8 +78,6 @@ def replay_tlu_data(data_file, real_time=True):
 
         last_readout_time = time.time()
 
-        # Leftover data from last readout
-#         last_readout_data = np.array([], dtype=np.uint32)
         last_trigger_number = -1
 
         for i in tqdm(range(n_readouts)):
@@ -298,7 +296,7 @@ def main():
                     config['output_enable'] = []
 
                 # Configure TLU
-                in_en, out_en = tlu.configure(tlu, config, output_ch)
+                in_en, _ = tlu.configure(tlu, config, output_ch)
             pp.Configuring = True
 
         # Check for start of run cmd from RunControl
@@ -322,7 +320,7 @@ def main():
                     if config["test"] > 0:
                         logging.info("Starting internal trigger generation...")
                         # Start test pulser
-                        # FIXME: This is bad, but pulser cannot simply be stopped w/o reset?
+                        # FIXME: This is bad since belongs to configure step, but pulser cannot simply be stopped w/o reset?
                         tlu['test_pulser'].DELAY = config["test"]
                         tlu['test_pulser'].WIDTH = 1
                         tlu['test_pulser'].REPEAT = config["count"]
@@ -393,8 +391,8 @@ def main():
         # Back to check for configured + start run state
         time.sleep(0.1)
 
+    # Proper close and disable inputs and outputs in case of termination or error
     logging.info('Closing TLU...')
-    # close and disable inputs and outputs
     tlu['tlu_master'].EN_INPUT = 0
     tlu['tlu_master'].EN_OUTPUT = 0
     tlu['test_pulser'].RESET
