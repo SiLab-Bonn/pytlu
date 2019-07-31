@@ -32,7 +32,7 @@ import psutil
 import numpy as np
 
 from pytlu import tlu_eudaq
-from tests import utils
+import utils
 
 pytlu_path = os.path.dirname(tlu_eudaq.__file__)
 data_folder = os.path.abspath(os.path.join(pytlu_path, '..', 'data'))
