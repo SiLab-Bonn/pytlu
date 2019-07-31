@@ -94,21 +94,20 @@ class EudaqScan(Tlu):
         '''
 
         super(EudaqScan, self).handle_data(data_tuple)
-        trigger_number = data_tuple[0]["trigger_id"]
-        trigger_timestamp = data_tuple[0]["time_stamp"]
         skipped_triggers = data_tuple[4]
-        n_triggers = trigger_number.shape[0]
+        raw_data = data_tuple[0]
+        n_triggers = raw_data.shape[0]
         for i in range(n_triggers):
             # Split can return empty data, thus do not return send empty data
             # Otherwise fragile EUDAQ will fail. It is based on very simple event counting only
-            if np.any(trigger_number):
-                actual_trigger_number = trigger_number[i]
-                trigger_data = (trigger_number[i], trigger_timestamp[i], skipped_triggers)
+            if np.any(raw_data['trigger_id']):
+                actual_trigger_number = raw_data[i]['trigger_id']
+                data = raw_data[i]
                 # Check for jumps in trigger number
                 if actual_trigger_number != self.last_trigger_number + 1:
                     logging.warning('Expected != Measured trigger number: %d != %d', self.last_trigger_number + 1, actual_trigger_number)
                 self.last_trigger_number = actual_trigger_number
-                self.callback(data=trigger_data, event_counter=self.event_counter)
+                self.callback(data=data, skipped_triggers=skipped_triggers, event_counter=self.event_counter)
                 self.event_counter += 1
 
 
@@ -291,7 +290,7 @@ def main():
                 tx_state_str.append(" -")
         return ",".join(tx_state_str)
 
-    def send_data_to_eudaq(data, event_counter):
+    def send_data_to_eudaq(data, skipped_triggers, event_counter):
         '''
         Send data to EUDAQ.
 
@@ -302,7 +301,7 @@ def main():
             event_counter: int
                 Event number (number of received triggers)
         '''
-        trg_number, trg_timestamp, skipped_triggers = data
+        trg_number, trg_timestamp = data['trigger_id'], data['time_stamp']
         # According to EUDAQ nomenclature
         particles = trg_number + skipped_triggers  # amount of possible triggers (accepted + skipped)
         scalers = get_tx_state()  # TLU status (TX state)

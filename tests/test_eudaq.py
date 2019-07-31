@@ -6,9 +6,9 @@
 #
 
 '''
-This test case needs a working eudaq 1.7 installation and the
+This test case needs a working eudaq 1.x-dev installation and the
 eudaq/python folder added to the python path, see:
-https://gitlab.cern.ch/silab/bdaq53/wikis/Eudaq-integration
+https://github.com/SiLab-Bonn/pytlu/blob/development/README.md
 
 The installation has to done at std. location (bin/lib in
 eudaq folder)
@@ -29,6 +29,7 @@ import psutil
 import numpy as np
 
 from pytlu import tlu_eudaq
+from tests import utils
 
 pytlu_path = os.path.dirname(tlu_eudaq.__file__)
 data_folder = os.path.abspath(os.path.join(pytlu_path, '..', 'data'))
@@ -129,10 +130,8 @@ class TestEudaq(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        return 
-#         os.remove(os.path.join(data_folder, 'ext_trigger_scan_tb_out.h5'))
-#         os.remove(os.path.join(data_folder, 'ext_trigger_scan_tb_snd.h5'))
-#         os.remove(os.path.join(data_folder, 'ext_trigger_scan_tb_sync_out.h5'))
+        os.remove(os.path.join(data_folder, 'tlu_example_data_out.h5'))
+        os.remove(os.path.join(data_folder, 'tlu_example_data_snd.h5'))
 
     def test_replay_data(self):
         ''' Test the communication with replayed data using the replay data functionality.
@@ -182,76 +181,66 @@ class TestEudaq(unittest.TestCase):
         self.assertTrue('Received EORE Event' in coll_output)
         self.assertTrue('Stop Run received' in prod_output)
 
-#     def test_send_data(self):
-#         ''' Test the data sending function of the scan_eudaq scan.
-# 
-#             The send raw data and stored raw data by the EudaqScan.handle_data() function is compared to the
-#             fixture to make sure that all data is handled.
-#         '''
-# 
-#         # Counter variable for calls to data send function
-#         self.n_calls = 0
-# 
-#         def SendEvent(raw_data):
-#             ''' Fake EUDAQ send function that is called per event and must have a trigger word
-#                 following the raw data
-#             '''
-#             assert raw_data[0] & au.TRIGGER_ID  # first raw data word is trigger word
-#             assert np.where(raw_data & au.TRIGGER_ID > 0)[0].shape[0] == 1  # only one trigger word expected
-#             raw_data_earray_snd.append(raw_data)
-#             self.n_calls += 1
-# 
-#         raw_data_file = os.path.join(data_folder, 'ext_trigger_scan_tb.h5')
-#         raw_data_file_out = os.path.join(data_folder, 'ext_trigger_scan_tb_out.h5')
-#         raw_data_file_snd = os.path.join(data_folder, 'ext_trigger_scan_tb_snd.h5')
-# 
-#         scan = tlu_eudaq.EudaqScan(record_chip_status=False)
-# 
-#         h5_file_snd = tb.open_file(raw_data_file_snd, mode='w', title=scan.scan_id)
-#         raw_data_earray_snd = h5_file_snd.create_earray(h5_file_snd.root, name='raw_data', atom=tb.UIntAtom(),
-#                                                         shape=(0,), title='raw_data',
-#                                                         filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))
-# 
-#         scan.set_callback(SendEvent)
-# 
-#         # Create storage structures and variables that are not created since we do not call scan.start()
-#         scan.h5_file = tb.open_file(raw_data_file_out, mode='w', title=scan.scan_id)
-#         scan.raw_data_earray = scan.h5_file.create_earray(scan.h5_file.root, name='raw_data', atom=tb.UIntAtom(),
-#                                                           shape=(0,), title='raw_data',
-#                                                           filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))
-#         scan.meta_data_table = scan.h5_file.create_table(scan.h5_file.root, name='meta_data', description=MetaTable,
-#                                                          title='meta_data', filters=tb.Filters(complib='blosc', complevel=5, fletcher32=False))
-#         scan.n_trigger = 0
-#         scan.scan_param_id = 0
-#         scan.socket = None
-#         scan.last_readout_data = None
-# 
-#         # Fake data taking using raw data file
-#         with tb.open_file(raw_data_file) as in_file:
-#             meta_data = in_file.root.meta_data[:]
-#             raw_data = in_file.root.raw_data
-#             for readout in meta_data:
-#                 index_start, index_stop = readout[0], readout[1]
-#                 readout_meta_data = [readout[name] for name in readout.dtype.names]
-# 
-#                 data_tuple = tuple([raw_data[index_start:index_stop]] + readout_meta_data)
-#                 scan.handle_data(data_tuple)
-# 
-#         # Send last remaining event
-#         scan.callback(scan.last_readout_data)
-# 
-#         h5_file_snd.close()
-#         scan.h5_file.close()
-# 
-#         # Check raw data is stored locally when using scan_eudaq
-#         data_equal, error_msg = utils.compare_h5_files(raw_data_file, raw_data_file_out, node_names=['raw_data'])
-#         self.assertTrue(data_equal, msg=error_msg)
-# 
-#         # Check send raw data is complete and correct when using scan_eudaq
-#         data_equal, error_msg = utils.compare_h5_files(raw_data_file, raw_data_file_snd, node_names=['raw_data'])
-#         self.assertTrue(data_equal, msg=error_msg)
-# 
-#         self.assertEqual(scan.n_trigger, self.n_calls)
+    def test_send_data(self):
+        ''' Test the data sending function of the tlu_eudaq scan.
+
+            The send raw data and stored raw data by the EudaqScan.handle_data() function is compared to the
+            fixture to make sure that all data is handled.
+        '''
+
+        # Counter variable for calls to data send function
+        self.n_calls = 0
+
+        def SendEvent(data, skipped_triggers=None, event_counter=None):
+            ''' Fake EUDAQ send function that is called per event.
+            '''
+            raw_data_table_snd.append(np.array([data]))
+            self.n_calls += 1
+
+        raw_data_file = os.path.join(data_folder, 'tlu_example_data.h5')
+        raw_data_file_out = os.path.join(data_folder, 'tlu_example_data_out.h5')
+        raw_data_file_snd = os.path.join(data_folder, 'tlu_example_data_snd.h5')
+
+        scan = tlu_eudaq.EudaqScan()
+
+        h5_file_snd = tb.open_file(raw_data_file_snd, mode='w')
+        raw_data_table_snd = h5_file_snd.create_table(h5_file_snd.root, name='raw_data',
+                                                      description=scan.data_dtype, title='data',
+                                                      filters=tb.Filters(complib='blosc', complevel=5))
+
+        scan.set_callback(SendEvent)
+
+        # Create storage structures and variables that are not created since we fake readout
+        scan.h5_file = tb.open_file(raw_data_file_out, mode='w')
+        scan.data_table = scan.h5_file.create_table(scan.h5_file.root, name='raw_data',
+                                                    description=scan.data_dtype, title='data',
+                                                    filters=tb.Filters(complib='blosc', complevel=5))
+        scan.meta_data_table = scan.h5_file.create_table(scan.h5_file.root, name='meta_data',
+                                                         description=scan.meta_data_dtype, title='meta_data',
+                                                         filters=tb.Filters(complib='blosc', complevel=5))
+        # Fake data taking using raw data file
+        with tb.open_file(raw_data_file) as in_file:
+            meta_data = in_file.root.meta_data[:]
+            raw_data = in_file.root.raw_data
+            for readout in meta_data:
+                index_start, index_stop = readout[0], readout[1]
+                readout_meta_data = [readout[name] for name in readout.dtype.names]
+
+                data_tuple = tuple([raw_data[index_start:index_stop]] + readout_meta_data)
+                scan.handle_data(data_tuple)
+
+        h5_file_snd.close()
+        scan.h5_file.close()
+
+        # Check raw data is stored locally when using scan_eudaq
+        data_equal, error_msg = utils.compare_h5_files(raw_data_file, raw_data_file_out, node_names=['raw_data'])
+        self.assertTrue(data_equal, msg=error_msg)
+
+        # Check send raw data is complete and correct when using scan_eudaq
+        data_equal, error_msg = utils.compare_h5_files(raw_data_file, raw_data_file_snd, node_names=['raw_data'])
+        self.assertTrue(data_equal, msg=error_msg)
+
+        self.assertEqual(scan.event_counter, self.n_calls)
 
 
 if __name__ == '__main__':
