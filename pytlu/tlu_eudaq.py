@@ -13,7 +13,6 @@ import argparse
 import os
 import time
 import sys
-import re
 
 import numpy as np
 import tables as tb
@@ -25,56 +24,6 @@ from pytlu.tlu import Tlu
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname)-3.3s] %(message)s"))
-
-
-def configure_tlu(chip, config, output_ch):
-    ''' Configure TLU.
-    '''
-    ch_no = [int(x[-1]) for x in config['output_enable']]
-    for i in range(4):
-        if ch_no.count(i) > 1:
-            raise argparse.ArgumentTypeError("Output channels. CHx and LEM0x are exclusive")
-
-    for oe in config['output_enable']:
-        if oe[0] == 'C':
-            chip['I2C_LED_CNT'][oe] = 3
-        else:  # LEMO
-            chip['I2C_LEMO_LEDS']['BUSY' + oe[-1]] = 1
-            chip['I2C_LEMO_LEDS']['TRIG' + oe[-1]] = 1
-            chip['I2C_LEMO_LEDS']['RST' + oe[-1]] = 1
-
-    for oe in config['output_enable']:
-        no = oe[-1]
-        if oe in output_ch[:4]:  # TODO: why is this needed
-            chip['I2C_IP_SEL'][no] = chip.IP_SEL['RJ45'] if oe[0] == 'C' else chip.IP_SEL['LEMO']
-
-    chip.write_i2c_config()
-
-    chip['tlu_master'].MAX_DISTANCE = config['coincidence_window']
-    chip['tlu_master'].THRESHOLD = config['threshold']
-    chip['tlu_master'].TIMEOUT = config['timeout']
-    chip['tlu_master'].N_BITS_TRIGGER_ID = config['n_bits_trig_id']
-
-    in_en = 0
-    for ie in config['input_enable']:
-        in_en = in_en | (0x01 << int(ie[-1]))
-
-    out_en = 0
-    for oe in config['output_enable']:
-        out_en = out_en | (0x01 << int(oe[-1]))
-    chip['tlu_master'].EN_OUTPUT = out_en
-
-    in_inv = 0
-    for ie in config['input_invert']:
-        in_inv = in_inv | (0x01 << int(ie[-1]))
-    chip['tlu_master'].INVERT_INPUT = in_inv
-
-    if config['test']:
-        chip['test_pulser'].DELAY = config['test']
-        chip['test_pulser'].WIDTH = 1
-        chip['test_pulser'].REPEAT = config['count']
-
-    return in_en, out_en
 
 
 class EudaqScan(Tlu):
@@ -223,7 +172,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Create configuration dict,
+    # Create configuration dict
     config = {"input_enable": args.input_enable, "output_enable": args.output_enable, "threshold": args.threshold,
               "n_bits_trig_id": args.n_bits_trig_id, "coincidence_window": args.coincidence_window, "test": args.test,
               "count": args.count, "timeout": args.timeout, "input_invert": args.input_invert,
@@ -349,7 +298,7 @@ def main():
                     config['output_enable'] = []
 
                 # Configure TLU
-                in_en, out_en = configure_tlu(tlu, config, output_ch)
+                in_en, out_en = tlu.configure(tlu, config, output_ch)
             pp.Configuring = True
 
         # Check for start of run cmd from RunControl
@@ -401,7 +350,7 @@ def main():
                             logging.info('Stopping run...')
                             # Disable output
                             if config["test"]:
-                                # FIXME: pusler cannot simply be stopped. Has to be resetted such that configuration is lost.
+                                # FIXME: pulser cannot simply be stopped. Has to be resetted such that configuration is lost.
                                 tlu['test_pulser'].RESET
                             else:
                                 tlu['tlu_master'].EN_INPUT = 0
