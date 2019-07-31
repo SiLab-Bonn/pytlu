@@ -22,7 +22,10 @@ import unittest
 import threading
 import subprocess
 import sys
-from queue import Queue, Empty
+try:
+    from queue import Queue, Empty  # Python3
+except ImportError:
+    from Queue import Queue, Empty  # Python2
 
 import tables as tb
 import psutil
