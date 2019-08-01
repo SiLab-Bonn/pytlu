@@ -9,7 +9,6 @@
     This script connects pytlu to the EUDAQ 1.x data acquisition system.
 '''
 
-import argparse
 import os
 import time
 import sys
@@ -20,6 +19,7 @@ from tqdm import tqdm
 import yaml
 import logging
 from pytlu.tlu import Tlu
+from pytlu import tlu
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
@@ -115,118 +115,43 @@ def replay_tlu_data(data_file, real_time=True):
 
 
 def main():
-    tlu = None
-    input_ch = ['CH0', 'CH1', 'CH2', 'CH3']
-    output_ch = ['CH0', 'CH1', 'CH2', 'CH3', 'CH4', 'CH5', 'LEMO0', 'LEMO1', 'LEMO2', 'LEMO3']
+    chip = None
 
-    def th_type(x):
-        if int(x) > 31 or int(x) < 0:
-            raise argparse.ArgumentTypeError("Threshold is 0 to 31")
-        return int(x)
-
-    parser = argparse.ArgumentParser(usage="pytlu -ie CH0 -oe CH0",
-                                     description='TLU DAQ\n TX_STATE: 0= DISABLED 1=WAIT 2=TRIGGERED (wait for busy HIGH) 4=READ_TRIG (wait for busy LOW) LBS is CH0', formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
-                        help='Enable input channels. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
-    parser.add_argument('-oe', '--output_enable', nargs='+', type=str, choices=output_ch, default=[],
-                        help='Enable ouput channels. CHx and LEM0x are exclusive. Allowed values are ' + ', '.join(output_ch), metavar='CHx/LEMOx')
-    parser.add_argument('-th', '--threshold', type=th_type, default=0,
-                        help="Digital threshold for input (in units of 1.5625ns). Default=0", metavar='0...31')
-    parser.add_argument('-b', '--n_bits_trig_id', type=th_type, default=16,
-                        help="Number of bits for trigger ID. Should correspond to TLU_TRIGGER_MAX_CLOCK_CYCLES - 1 which is set for TLU module. Default=0", metavar='0...31')
-    parser.add_argument('-ds', '--coincidence_window', type=th_type, default=31,
-                        help="Maximum distance between inputs rise time (in units of 1.5625ns). Default=31, 0=disabled", metavar='0...31')
-    parser.add_argument('-t', '--test', type=int,
-                        help="Generate triggers with given distance (in units of 25 ns).", metavar='1...n')
-    parser.add_argument('-c', '--count', type=int, default=0,
-                        help="Number of generated triggers. 0=infinite (default) ", metavar='0...n')
-    parser.add_argument('--timeout', type=int, default=0x0000,
-                        help="Timeout to wait for DUT. Default=0, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
-    parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
-                        help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
-    parser.add_argument('-f', '--output_folder', type=str,
-                        default=None, help='Output folder of data and log file.  Default: /pytlu/output_data')
-    parser.add_argument('-l', '--log_file', type=str,
-                        default=None, help='Name of log file')
-    parser.add_argument('-d', '--data_file', type=str,
-                        default=None, help='Name of data file')
-    parser.add_argument('--monitor_addr', type=str, default=None,
-                        help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
-    parser.add_argument('--scan_time', type=int, default=0,
-                        help="Scan time in seconds. Default=disabled, disable=0")
-
-    # EUDAQ related
-    parser.add_argument('address', metavar='address',
-                        help='Destination address',
-                        default='tcp://localhost:44000',
-                        nargs='?')
-    parser.add_argument('--path', type=str,
-                        help='Absolute path of your eudaq installation')
-    parser.add_argument('--replay', type=str,
-                        help='Raw data file to replay for testing')
-    parser.add_argument('--delay', type=float,
-                        help='Additional delay when replaying data in seconds')
-
-    args = parser.parse_args()
+    args = tlu.parse_arguments(eudaq=True)
 
     # Create configuration dict
-    config = {"input_enable": args.input_enable, "output_enable": args.output_enable, "threshold": args.threshold,
-              "n_bits_trig_id": args.n_bits_trig_id, "coincidence_window": args.coincidence_window, "test": args.test,
-              "count": args.count, "timeout": args.timeout, "input_invert": args.input_invert,
-              "output_folder": args.output_folder, "log_file": args.log_file, "data_file": args.data_file,
-              "monitor_addr": args.monitor_addr, "scan_time": args.scan_time}
+    config = tlu.create_configuration(args)
 
     # Import EUDAQ python wrapper with error handling
     try:
         from PyEUDAQWrapper import PyTluProducer
     except ImportError:
-        if not args.path:
+        if not config['path']:
             logging.error('Cannot find PyEUDAQWrapper! Please specify the path of your EUDAQ installation!')
             return
         else:
-            wrapper_path = os.path.join(args.path, 'python/')
-            sys.path.append(os.path.join(args.path, 'python/'))
+            wrapper_path = os.path.join(config['path'], 'python/')
+            sys.path.append(os.path.join(config['path'], 'python/'))
             try:
                 from PyEUDAQWrapper import PyTluProducer
             except ImportError:
                 logging.error('Cannot find PyEUDAQWrapper in %s', wrapper_path)
                 return
 
-    logging.info('Connect to %s', args.address)
+    logging.info('Connect to %s', config['address'])
 
-    if args.replay:
-        if os.path.isfile(args.replay):
-            logging.info('Replay %s', args.replay)
+    if config['replay']:
+        if os.path.isfile(config['replay']):
+            logging.info('Replay %s', config['replay'])
         else:
-            logging.error('Cannot open %s for replay!', args.replay)
-    delay = args.delay if args.delay else 0.
+            logging.error('Cannot open %s for replay!', config['replay'])
+    delay = config['delay'] if config['delay'] else 0.
 
-    pp = PyTluProducer(args.address)
-
-    def print_log(trg_rate=None, trg_rate_acc=None):
-        '''
-        Print logging message.
-
-        Parameters:
-        -----------
-            trg_rate: float
-                Trigger rate on scintillator inputs
-            trg_rate_acc: float
-                Real trigger rate (rate of triggers accepted by DUTs)
-        '''
-
-        if trg_rate is None:
-            trg_rate = 0
-        if trg_rate_acc is None:
-            trg_rate_acc = 0
-        logging.info("Trigger: %8d | Skip: %8d | Timeout: %2d | Rate: %.2f (%.2f) Hz | TxState: %06x" % (
-            tlu['tlu_master'].TRIGGER_ID, tlu['tlu_master'].SKIP_TRIG_COUNTER, tlu['tlu_master'].TIMEOUT_COUNTER,
-            trg_rate_acc, trg_rate, tlu['tlu_master'].TX_STATE))
+    pp = PyTluProducer(config['address'])
 
     def get_tx_state():
-        if tlu is not None:
-            tx_state = tlu['tlu_master'].TX_STATE
+        if chip is not None:
+            tx_state = chip['tlu_master'].TX_STATE
         else:
             return
         tx_state_str = []
@@ -265,11 +190,11 @@ def main():
         # Check if configuration received
         if pp.Configuring:
             logging.info('Configuring...')
-            if not args.replay:  # Only need configure step if not replaying data
-                if tlu is None:  # Init TLU
-                    tlu = EudaqScan(output_folder=args.output_folder, log_file=args.log_file, data_file=args.data_file, monitor_addr=args.monitor_addr)
-                    tlu.init()
-                    tlu.set_callback(send_data_to_eudaq)  # Set callback function in order to send data to EUDAQ
+            if not config['replay']:  # Only need configure step if not replaying data
+                if chip is None:  # Init TLU
+                    chip = EudaqScan(output_folder=config['output_folder'], log_file=config['log_file'], data_file=config['data_file'], monitor_addr=config['monitor_addr'])
+                    chip.init()
+                    chip.set_callback(send_data_to_eudaq)  # Set callback function in order to send data to EUDAQ
 
                 # Read configuration file, map to pytlu format and update already existing config
                 trigger_interval = float(pp.GetConfigParameter(item="TriggerInterval", default=False))  # (auto) trigger interval in units of 1 ms
@@ -296,7 +221,7 @@ def main():
                     config['output_enable'] = []
 
                 # Configure TLU
-                in_en, _ = tlu.configure(tlu, config, output_ch)
+                in_en, _ = chip.configure(config)
             pp.Configuring = True
 
         # Check for start of run cmd from RunControl
@@ -313,22 +238,22 @@ def main():
             trigger_id_start = 0
             skipped_triggers_start = 0
 
-            if not args.replay:
+            if not config['replay']:
                 # Start pytlu
                 pp.StartingRun = True  # set status and send BORE
-                with tlu.readout():
+                with chip.readout():
                     if config["test"] > 0:
                         logging.info("Starting internal trigger generation...")
                         # Start test pulser
                         # FIXME: This is bad since belongs to configure step, but pulser cannot simply be stopped w/o reset?
-                        tlu['test_pulser'].DELAY = config["test"]
-                        tlu['test_pulser'].WIDTH = 1
-                        tlu['test_pulser'].REPEAT = config["count"]
-                        tlu['test_pulser'].START
+                        chip['test_pulser'].DELAY = config["test"]
+                        chip['test_pulser'].WIDTH = 1
+                        chip['test_pulser'].REPEAT = config["count"]
+                        chip['test_pulser'].START
                     else:
                         logging.info("Triggering on scintillator inputs: {0}".format(args.input_enable))
                         # Enable inputs
-                        tlu['tlu_master'].EN_INPUT = in_en
+                        chip['tlu_master'].EN_INPUT = in_en
                     stop_run = False
                     while not stop_run:
                         if pp.Error or pp.Terminating:
@@ -338,9 +263,9 @@ def main():
                             # Disable output
                             if config["test"]:
                                 # FIXME: pusler cannot simply be stopped. Has to be resetted such that configuration is lost.
-                                tlu['test_pulser'].RESET
+                                chip['test_pulser'].RESET
                             else:
-                                tlu['tlu_master'].EN_INPUT = 0
+                                chip['tlu_master'].EN_INPUT = 0
                             # FIXME: using not thread safe variable
                             stop_run = True
                             break
@@ -349,27 +274,29 @@ def main():
                             # Disable output
                             if config["test"]:
                                 # FIXME: pulser cannot simply be stopped. Has to be resetted such that configuration is lost.
-                                tlu['test_pulser'].RESET
+                                chip['test_pulser'].RESET
                             else:
-                                tlu['tlu_master'].EN_INPUT = 0
+                                chip['tlu_master'].EN_INPUT = 0
                             # FIXME: using not thread safe variable
                             stop_run = True
                             break
                         # Calculate parameter for logging output
                         actual_time = time.time()
-                        actual_trigger_id = tlu['tlu_master'].TRIGGER_ID
-                        actual_skipped_triggers = tlu['tlu_master'].SKIP_TRIG_COUNTER
+                        actual_trigger_id = chip['tlu_master'].TRIGGER_ID
+                        actual_skipped_triggers = chip['tlu_master'].SKIP_TRIG_COUNTER
                         trg_rate_acc = (actual_trigger_id - trigger_id_start) / (actual_time - start_time)
                         trg_rate = trg_rate_acc + (actual_skipped_triggers - skipped_triggers_start) / (actual_time - start_time)
-                        print_log(trg_rate=trg_rate, trg_rate_acc=trg_rate_acc)
+                        timeout_counter = chip['tlu_master'].TIMEOUT_COUNTER
+                        tx_state = chip['tlu_master'].TX_STATE
                         start_time = actual_time
                         trigger_id_start = actual_trigger_id
                         skipped_triggers_start = actual_skipped_triggers
+                        tlu.print_log(trg_rate, trg_rate_acc, actual_trigger_id, actual_skipped_triggers, timeout_counter, tx_state)
                         time.sleep(1)
             else:
                 logging.info("Replaying data...")
                 pp.StartingRun = True  # set status and send BORE
-                for event_counter, data in enumerate(replay_tlu_data(data_file=args.replay)):
+                for event_counter, data in enumerate(replay_tlu_data(data_file=config['replay'])):
                     trg_number, trg_timestamp, skipped_triggers = data
                     # According to EUDAQ nomenclature
                     particles = trg_number + skipped_triggers  # amount of possible triggers (accepted + skipped)
@@ -393,10 +320,10 @@ def main():
 
     # Proper close and disable inputs and outputs in case of termination or error
     logging.info('Closing TLU...')
-    tlu['tlu_master'].EN_INPUT = 0
-    tlu['tlu_master'].EN_OUTPUT = 0
-    tlu['test_pulser'].RESET
-    tlu.close()
+    chip['tlu_master'].EN_INPUT = 0
+    chip['tlu_master'].EN_OUTPUT = 0
+    chip['test_pulser'].RESET
+    chip.close()
 
 
 if __name__ == "__main__":

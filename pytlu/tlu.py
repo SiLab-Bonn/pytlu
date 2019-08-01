@@ -28,12 +28,93 @@ root_logger.handlers[0].setFormatter(logging.Formatter("%(asctime)s [%(levelname
 
 stop_run = False
 
+input_ch = ['CH0', 'CH1', 'CH2', 'CH3']
+output_ch = ['CH0', 'CH1', 'CH2', 'CH3', 'CH4', 'CH5', 'LEMO0', 'LEMO1', 'LEMO2', 'LEMO3']
+
 
 def handle_sig(signum, frame):
     logging.info('Pressed Ctrl-C')
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     global stop_run
     stop_run = True
+
+
+def parse_arguments(eudaq=False):
+    def th_type(x):
+        if int(x) > 31 or int(x) < 0:
+            raise argparse.ArgumentTypeError("Threshold is 0 to 31")
+        return int(x)
+
+    parser = argparse.ArgumentParser(usage="pytlu -ie CH0 -oe CH0",
+                                     description='TLU DAQ\n TX_STATE: 0= DISABLED 1=WAIT 2=TRIGGERED (wait for busy HIGH) 4=READ_TRIG (wait for busy LOW) LBS is CH0', formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
+                        help='Enable input channels. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
+    parser.add_argument('-oe', '--output_enable', nargs='+', type=str, choices=output_ch, default=[],
+                        help='Enable ouput channels. CHx and LEM0x are exclusive. Allowed values are ' + ', '.join(output_ch), metavar='CHx/LEMOx')
+    parser.add_argument('-th', '--threshold', type=th_type, default=0,
+                        help="Digital threshold for input (in units of 1.5625ns). Default=0", metavar='0...31')
+    parser.add_argument('-b', '--n_bits_trig_id', type=th_type, default=16,
+                        help="Number of bits for trigger ID. Should correspond to TLU_TRIGGER_MAX_CLOCK_CYCLES - 1 which is set for TLU module. Default=0", metavar='0...31')
+    parser.add_argument('-ds', '--coincidence_window', type=th_type, default=31,
+                        help="Maximum distance between inputs rise time (in units of 1.5625ns). Default=31, 0=disabled", metavar='0...31')
+    parser.add_argument('-t', '--test', type=int,
+                        help="Generate triggers with given distance (in units of 25 ns).", metavar='1...n')
+    parser.add_argument('-c', '--count', type=int, default=0,
+                        help="Number of generated triggers. 0=infinite (default) ", metavar='0...n')
+    parser.add_argument('--timeout', type=int, default=0x0000,
+                        help="Timeout to wait for DUT. Default=0, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
+    parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
+                        help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
+    parser.add_argument('-f', '--output_folder', type=str,
+                        default=None, help='Output folder of data and log file.  Default: /pytlu/output_data')
+    parser.add_argument('-l', '--log_file', type=str,
+                        default=None, help='Name of log file')
+    parser.add_argument('-d', '--data_file', type=str,
+                        default=None, help='Name of data file')
+    parser.add_argument('--monitor_addr', type=str, default=None,
+                        help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
+    parser.add_argument('--scan_time', type=int, default=0,
+                        help="Scan time in seconds. Default=disabled, disable=0")
+
+    if eudaq:
+        # additional EUDAQ related arguments
+        parser.add_argument('address', metavar='address',
+                            help='Destination address',
+                            default='tcp://localhost:44000',
+                            nargs='?')
+        parser.add_argument('--path', type=str,
+                            help='Absolute path of your eudaq installation')
+        parser.add_argument('--replay', type=str,
+                            help='Raw data file to replay for testing')
+        parser.add_argument('--delay', type=float,
+                            help='Additional delay when replaying data in seconds')
+
+    args = parser.parse_args()
+
+    return args
+
+
+def print_log(trg_rate, trg_rate_acc, trg_number, skipped_trigger, timeout_counter, tx_state):
+        '''
+        Print logging message.
+
+        Parameters:
+        -----------
+            trg_rate: float
+                Trigger rate on scintillator inputs
+            trg_rate_acc: float
+                Real trigger rate (rate of triggers accepted by DUTs)
+        '''
+        logging.info("Trigger: %8d | Skip: %8d | Timeout: %2d | Rate: %.2f (%.2f) Hz | TxState: %06x" % (
+            trg_number, skipped_trigger, timeout_counter, trg_rate_acc, trg_rate, tx_state))
+
+
+def create_configuration(args):
+    config = {}
+    for arg in vars(args):
+        config[arg] = getattr(args, arg)
+    return config
 
 
 class Tlu(Dut):
@@ -250,7 +331,7 @@ class Tlu(Dut):
     def handle_err(self, exc):
         self.logger.warning(exc[1].__class__.__name__ + ": " + str(exc[1]))
 
-    def configure(self, chip, config, output_ch):
+    def configure(self, config):
         ''' Configure TLU.
         '''
         ch_no = [int(x[-1]) for x in config['output_enable']]
@@ -260,23 +341,23 @@ class Tlu(Dut):
 
         for oe in config['output_enable']:
             if oe[0] == 'C':
-                chip['I2C_LED_CNT'][oe] = 3
+                self['I2C_LED_CNT'][oe] = 3
             else:  # LEMO
-                chip['I2C_LEMO_LEDS']['BUSY' + oe[-1]] = 1
-                chip['I2C_LEMO_LEDS']['TRIG' + oe[-1]] = 1
-                chip['I2C_LEMO_LEDS']['RST' + oe[-1]] = 1
+                self['I2C_LEMO_LEDS']['BUSY' + oe[-1]] = 1
+                self['I2C_LEMO_LEDS']['TRIG' + oe[-1]] = 1
+                self['I2C_LEMO_LEDS']['RST' + oe[-1]] = 1
 
         for oe in config['output_enable']:
             no = oe[-1]
             if oe in output_ch[:4]:  # TODO: why is this needed
-                chip['I2C_IP_SEL'][no] = chip.IP_SEL['RJ45'] if oe[0] == 'C' else chip.IP_SEL['LEMO']
+                self['I2C_IP_SEL'][no] = self.IP_SEL['RJ45'] if oe[0] == 'C' else self.IP_SEL['LEMO']
 
-        chip.write_i2c_config()
+        self.write_i2c_config()
 
-        chip['tlu_master'].MAX_DISTANCE = config['coincidence_window']
-        chip['tlu_master'].THRESHOLD = config['threshold']
-        chip['tlu_master'].TIMEOUT = config['timeout']
-        chip['tlu_master'].N_BITS_TRIGGER_ID = config['n_bits_trig_id']
+        self['tlu_master'].MAX_DISTANCE = config['coincidence_window']
+        self['tlu_master'].THRESHOLD = config['threshold']
+        self['tlu_master'].TIMEOUT = config['timeout']
+        self['tlu_master'].N_BITS_TRIGGER_ID = config['n_bits_trig_id']
 
         in_en = 0
         for ie in config['input_enable']:
@@ -285,95 +366,32 @@ class Tlu(Dut):
         out_en = 0
         for oe in config['output_enable']:
             out_en = out_en | (0x01 << int(oe[-1]))
-        chip['tlu_master'].EN_OUTPUT = out_en
+        self['tlu_master'].EN_OUTPUT = out_en
 
         in_inv = 0
         for ie in config['input_invert']:
             in_inv = in_inv | (0x01 << int(ie[-1]))
-        chip['tlu_master'].INVERT_INPUT = in_inv
+        self['tlu_master'].INVERT_INPUT = in_inv
 
         if config['test']:
-            chip['test_pulser'].DELAY = config['test']
-            chip['test_pulser'].WIDTH = 1
-            chip['test_pulser'].REPEAT = config['count']
+            self['test_pulser'].DELAY = config['test']
+            self['test_pulser'].WIDTH = 1
+            self['test_pulser'].REPEAT = config['count']
 
         return in_en, out_en
 
 
 def main():
-    input_ch = ['CH0', 'CH1', 'CH2', 'CH3']
-    output_ch = ['CH0', 'CH1', 'CH2', 'CH3', 'CH4', 'CH5', 'LEMO0', 'LEMO1', 'LEMO2', 'LEMO3']
-
-    def th_type(x):
-        if int(x) > 31 or int(x) < 0:
-            raise argparse.ArgumentTypeError("Threshold is 0 to 31")
-        return int(x)
-
-    parser = argparse.ArgumentParser(usage="pytlu -ie CH0 -oe CH0",
-                                     description='TLU DAQ\n TX_STATE: 0= DISABLED 1=WAIT 2=TRIGGERED (wait for busy HIGH) 4=READ_TRIG (wait for busy LOW) LBS is CH0', formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
-                        help='Enable input channels. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
-    parser.add_argument('-oe', '--output_enable', nargs='+', type=str, choices=output_ch, required=True,
-                        help='Enable ouput channels. CHx and LEM0x are exclusive. Allowed values are ' + ', '.join(output_ch), metavar='CHx/LEMOx')
-    parser.add_argument('-th', '--threshold', type=th_type, default=0,
-                        help="Digital threshold for input (in units of 1.5625ns). Default=0", metavar='0...31')
-    parser.add_argument('-b', '--n_bits_trig_id', type=th_type, default=16,
-                        help="Number of bits for trigger ID. Should correspond to TLU_TRIGGER_MAX_CLOCK_CYCLES - 1 which is set for TLU module. Default=0", metavar='0...31')
-    parser.add_argument('-ds', '--coincidence_window', type=th_type, default=31,
-                        help="Maximum distance between inputs rise time (in units of 1.5625ns). Default=31, 0=disabled", metavar='0...31')
-    parser.add_argument('-t', '--test', type=int,
-                        help="Generate triggers with given distance (in units of 25 ns).", metavar='1...n')
-    parser.add_argument('-c', '--count', type=int, default=0,
-                        help="Number of generated triggers. 0=infinite (default) ", metavar='0...n')
-    parser.add_argument('--timeout', type=int, default=0x0000,
-                        help="Timeout to wait for DUT. Default=0, 0=disabled. If you need to be synchronous with multiple DUTs choose timeout = 0.", metavar='0...65535')
-    parser.add_argument('-inv', '--input_invert', nargs='+', type=str, choices=input_ch, default=[],
-                        help='Invert input and detect positive edges. Allowed values are ' + ', '.join(input_ch), metavar='CHx')
-    parser.add_argument('-f', '--output_folder', type=str,
-                        default=None, help='Output folder of data and log file.  Default: /pytlu/output_data')
-    parser.add_argument('-l', '--log_file', type=str,
-                        default=None, help='Name of log file')
-    parser.add_argument('-d', '--data_file', type=str,
-                        default=None, help='Name of data file')
-    parser.add_argument('--monitor_addr', type=str, default=None,
-                        help="Address for online monitor wait for DUT. Default=disabled, Example=tcp://127.0.0.1:5550")
-    parser.add_argument('--scan_time', type=int, default=0,
-                        help="Scan time in seconds. Default=disabled, disable=0")
-
-    args = parser.parse_args()
+    # Parse arguments
+    args = parse_arguments()
 
     # Create configuration dict
-    config = {"input_enable": args.input_enable, "output_enable": args.output_enable, "threshold": args.threshold,
-              "n_bits_trig_id": args.n_bits_trig_id, "coincidence_window": args.coincidence_window, "test": args.test,
-              "count": args.count, "timeout": args.timeout, "input_invert": args.input_invert,
-              "output_folder": args.output_folder, "log_file": args.log_file, "data_file": args.data_file,
-              "monitor_addr": args.monitor_addr, "scan_time": args.scan_time}
+    config = create_configuration(args)
 
-    chip = Tlu(output_folder=args.output_folder, log_file=args.log_file, data_file=args.data_file, monitor_addr=args.monitor_addr)
+    chip = Tlu(output_folder=config['output_folder'], log_file=config['log_file'], data_file=config['data_file'], monitor_addr=config['monitor_addr'])
     chip.init()
 
-    in_en, _ = chip.configure(chip, config, output_ch)
-
-    def print_log(trg_rate=None, trg_rate_acc=None):
-        '''
-        Print logging message.
-
-        Parameters:
-        -----------
-            trg_rate: float
-                Trigger rate on scintillator inputs
-            trg_rate_acc: float
-                Real trigger rate (rate of triggers accepted by DUTs)
-        '''
-
-        if trg_rate is None:
-            trg_rate = 0
-        if trg_rate_acc is None:
-            trg_rate_acc = 0
-        logging.info("Trigger: %8d | Skip: %8d | Timeout: %2d | Rate: %.2f (%.2f) Hz | TxState: %06x" % (
-            chip['tlu_master'].TRIGGER_ID, chip['tlu_master'].SKIP_TRIG_COUNTER, chip['tlu_master'].TIMEOUT_COUNTER,
-            trg_rate_acc, trg_rate, chip['tlu_master'].TX_STATE))
+    in_en, _ = chip.configure(config)
 
     start_time = 0
     trigger_id_start = 0
@@ -381,7 +399,7 @@ def main():
 
     logging.info("Starting... Press Ctrl+C to exit...")
     signal.signal(signal.SIGINT, handle_sig)
-    if args.test:
+    if config['test']:
         logging.info("Starting internal trigger generation...")
         with chip.readout():
             chip['test_pulser'].START  # Start test pulser
@@ -392,15 +410,17 @@ def main():
                 actual_skipped_triggers = chip['tlu_master'].SKIP_TRIG_COUNTER
                 trg_rate_acc = (actual_trigger_id - trigger_id_start) / (actual_time - start_time)
                 trg_rate = trg_rate_acc + (actual_skipped_triggers - skipped_triggers_start) / (actual_time - start_time)
-                print_log(trg_rate=trg_rate, trg_rate_acc=trg_rate_acc)
+                timeout_counter = chip['tlu_master'].TIMEOUT_COUNTER
+                tx_state = chip['tlu_master'].TX_STATE
                 start_time = actual_time
                 trigger_id_start = actual_trigger_id
                 skipped_triggers_start = actual_skipped_triggers
+                print_log(trg_rate, trg_rate_acc, actual_trigger_id, actual_skipped_triggers, timeout_counter, tx_state)
                 time.sleep(1)
             # reset pulser in case of abort
             chip['test_pulser'].RESET
     else:
-        logging.info("Triggering on scintillator inputs: {0}".format(args.input_enable))
+        logging.info("Triggering on scintillator inputs: {0}".format(config['input_enable']))
         with chip.readout():
             chip['tlu_master'].EN_INPUT = in_en  # Enable inputs
             while not stop_run:
@@ -410,10 +430,12 @@ def main():
                 actual_skipped_triggers = chip['tlu_master'].SKIP_TRIG_COUNTER
                 trg_rate_acc = (actual_trigger_id - trigger_id_start) / (actual_time - start_time)
                 trg_rate = trg_rate_acc + (actual_skipped_triggers - skipped_triggers_start) / (actual_time - start_time)
-                print_log(trg_rate=trg_rate, trg_rate_acc=trg_rate_acc)
+                timeout_counter = chip['tlu_master'].TIMEOUT_COUNTER
+                tx_state = chip['tlu_master'].TX_STATE
                 start_time = actual_time
                 trigger_id_start = actual_trigger_id
                 skipped_triggers_start = actual_skipped_triggers
+                print_log(trg_rate, trg_rate_acc, actual_trigger_id, actual_skipped_triggers, timeout_counter, tx_state)
                 time.sleep(1)
 
     # close and disable inputs and outputs
