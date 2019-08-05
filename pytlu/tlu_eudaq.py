@@ -104,14 +104,14 @@ def replay_tlu_data(data_file, real_time=True):
 
             skipped_triggers = meta_data[i]['skipped_triggers']
             for dat in actual_data:
-                    actual_trigger_number = dat['trigger_id']
-                    trg_number, trg_timestamp = dat['trigger_id'], dat['time_stamp']
-                    # Check for jumps in trigger number
-                    if actual_trigger_number != last_trigger_number + 1:
-                        logging.warning('Expected != Measured trigger number: %d != %d', last_trigger_number + 1, actual_trigger_number)
-                    last_trigger_number = actual_trigger_number
+                actual_trigger_number = dat['trigger_id']
+                trg_number, trg_timestamp = dat['trigger_id'], dat['time_stamp']
+                # Check for jumps in trigger number
+                if actual_trigger_number != last_trigger_number + 1:
+                    logging.warning('Expected != Measured trigger number: %d != %d', last_trigger_number + 1, actual_trigger_number)
+                last_trigger_number = actual_trigger_number
 
-                    yield trg_number, trg_timestamp, skipped_triggers
+                yield trg_number, trg_timestamp, skipped_triggers
 
 
 def main():
@@ -149,18 +149,26 @@ def main():
 
     pp = PyTluProducer(config['address'])
 
-    def get_tx_state():
+    def get_dut_status():
+        ''' Get DUT status and convert into EUDAQ format.
+            For details see EUDAQ user manual.
+        '''
         if chip is not None:
             tx_state = chip['tlu_master'].TX_STATE
         else:
             return
         tx_state_str = []
         for i in range(6):
-            if in_en & (0x20 >> i):
-                tx_state_str.append(" %x" % ((tx_state >> (4 * i)) & 0xF))
+            if (out_en >> i) & 0x01:
+                dut_state = (tx_state >> (4 * i)) & 0xF
+                if dut_state in [1, 2]:  # convert to ugly EUDAQ format
+                    dut_state -= 1
+                tx_state_str.append("-%i," % dut_state)
             else:
-                tx_state_str.append(" -")
-        return ",".join(tx_state_str)
+                tx_state_str.append("--,")
+        tlu_status = ''.join(tx_state_str)
+        tlu_status = tlu_status + ' (-,-)'  # no veto and DMA state availabe
+        return tlu_status
 
     def send_data_to_eudaq(data, skipped_triggers, event_counter):
         '''
@@ -176,8 +184,9 @@ def main():
         trg_number, trg_timestamp = data['trigger_id'], data['time_stamp']
         # According to EUDAQ nomenclature
         particles = trg_number + skipped_triggers  # amount of possible triggers (accepted + skipped)
-        scalers = get_tx_state()  # TLU status (TX state)
-        pp.SendEventExtraInfo((event_counter, trg_timestamp, trg_number), particles, scalers)  # Send data to EUDAQ
+        status = get_dut_status()  # TLU status according to EUDAQ format
+        scalers = '-, -, -, -'  # input triggers on each scinitllator input (TODO: not yet implemented)
+        pp.SendEventExtraInfo((event_counter, trg_timestamp, trg_number), particles, status, scalers)  # Send data to EUDAQ
 
     # Start state mashine, keep connection until termination of euRun
     while not pp.Error and not pp.Terminating:
@@ -221,7 +230,7 @@ def main():
                     config['output_enable'] = []
 
                 # Configure TLU
-                in_en, _ = chip.configure(config)
+                in_en, out_en = chip.configure(config)
             pp.Configuring = True
 
         # Check for start of run cmd from RunControl
@@ -251,7 +260,7 @@ def main():
                         chip['test_pulser'].REPEAT = config["count"]
                         chip['test_pulser'].START
                     else:
-                        logging.info("Triggering on scintillator inputs: {0}".format(args.input_enable))
+                        logging.info("Triggering on scintillator inputs: {0}".format(config['input_enable']))
                         # Enable inputs
                         chip['tlu_master'].EN_INPUT = in_en
                     stop_run = False
@@ -300,8 +309,8 @@ def main():
                     trg_number, trg_timestamp, skipped_triggers = data
                     # According to EUDAQ nomenclature
                     particles = trg_number + skipped_triggers  # amount of possible triggers (accepted + skipped)
-                    scalers = get_tx_state()  # TLU status (TX state)
-                    pp.SendEventExtraInfo((event_counter, trg_timestamp, trg_number), particles, scalers)  # Send data to EUDAQ
+                    status = get_dut_status()  # TLU status (TX state)
+                    pp.SendEventExtraInfo((event_counter, trg_timestamp, trg_number), particles, status)  # Send data to EUDAQ
                     if pp.Error or pp.Terminating:
                         break
                     if pp.StoppingRun:

@@ -45,7 +45,7 @@ def parse_arguments(eudaq=False):
             raise argparse.ArgumentTypeError("Threshold is 0 to 31")
         return int(x)
 
-    parser = argparse.ArgumentParser(usage="pytlu -ie CH0 -oe CH0",
+    parser = argparse.ArgumentParser(usage="pytlu_eudaq" if eudaq else "pytlu -ie CH0 -oe CH0",
                                      description='TLU DAQ\n TX_STATE: 0= DISABLED 1=WAIT 2=TRIGGERED (wait for busy HIGH) 4=READ_TRIG (wait for busy LOW) LBS is CH0', formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('-ie', '--input_enable', nargs='+', type=str, choices=input_ch, default=[],
