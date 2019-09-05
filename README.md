@@ -38,7 +38,7 @@ Install dependencies:
 ```bash
 conda install numpy psutil qtpy pyqt pyyaml pyzmq pytables
 pip install pyusb pySiLibUSB
-pip install 'basil_daq>=2.4.10,<3.0.0'
+pip install basil-daq>=3.0.0
 ```
 
 Install pytlu from PyPI:
@@ -46,7 +46,7 @@ Install pytlu from PyPI:
 pip install pytlu
 ```
 
-OR install pytlu from sources:
+or install pytlu from sources:
 ```bash
 python setup.py develop
 ```
