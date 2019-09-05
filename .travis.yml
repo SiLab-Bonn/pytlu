@@ -35,7 +35,10 @@ install:
   # Install pytlu
   - python setup.py develop
 
+  # Install EUDAQ
+  - source tests/setup_eudaq.sh
+
 script:
   - cd tests
   - python --version
-  - pytest -s
+  - pytest -s -v

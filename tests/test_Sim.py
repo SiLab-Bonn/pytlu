@@ -19,7 +19,6 @@ from pytlu.tlu import Tlu
 class TestSim(unittest.TestCase):
     def setUp(self):
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        print(root_dir)
         cocotb_compile_and_run(
             sim_bus="StreamDriver",
             sim_files=[root_dir + '/tests/tb.v'],
@@ -40,7 +39,7 @@ class TestSim(unittest.TestCase):
         self.dut = Tlu(conf=cnfg)
         self.dut.init()
 
-    def test_single_simle_mode(self):
+    def test_single_simple_mode(self):
         self.dut['TLU_TB'].TRIGGER_COUNTER = 0
         self.dut['TLU_TB'].TRIGGER_MODE = 2
         self.dut['TLU_TB'].TRIGGER_SELECT = 1
@@ -191,8 +190,8 @@ class TestSim(unittest.TestCase):
 
             start += exp[i]
 
-    def check_data(self, how_many, tdc_en=False, start=0):
-        for i in range(20):
+    def check_data(self, how_many, tdc_en=False):
+        for _ in range(20):
             self.dut['SEQ_TB'].is_ready
 
         ret = self.dut['FIFO_TB'].get_data()
