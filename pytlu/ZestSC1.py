@@ -206,8 +206,7 @@ class TluDevice:
                 logger.debug('write_register: {}'.format(ret))
 
     def read_register(self, index, length):
-        ret = array.array('B')
-        ret.frombytes(('\x00' * length).encode())
+        ret = array.array('B',  ('\x00' * length).encode('utf-8'))
         with self._lock:
             for i in range(length):
                 ctrl_ret = self.dev.ctrl_transfer(ENDPOINT['read_ctrl'],
