@@ -1,0 +1,4 @@
+include README.* VERSION requirements.txt
+include pytlu/*.yaml
+recursive-include pytlu/firmware *
+recursive-include firmware *

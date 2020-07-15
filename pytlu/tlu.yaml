@@ -5,10 +5,15 @@
 # ------------------------------------------------------------
 #
 
+name    : tlu_v0.x
+version : 5
+
 transfer_layer:
   - name  : intf
-    type  : pytlu.ZestSC1TL    init:
-        bit_file : tlu.bit
+    type  : pytlu.ZestSC1TL
+    init:
+        bit_file : firmware/tlu.bit
+
 hw_drivers:
   - name      : gpio
     type      : gpio
@@ -20,23 +25,23 @@ hw_drivers:
     type      : i2c
     interface : intf
     base_addr : 0x4000
-    
+
   - name      : tlu_master
     type      : pytlu.tlu_master
     interface : intf
     base_addr : 0x5000
-    
+
   - name      : test_pulser
     type      : pulse_gen
     interface : intf
     base_addr : 0x6000
-    
+
   - name      : stream_fifo
     type      : pytlu.stream_fifo
     interface : intf
     base_addr : 0x7000
-    
-    
+
+
 registers:
   - name        : I2C_MUX
     type        : StdRegister
@@ -70,7 +75,7 @@ registers:
       - name    : CH5
         size    : 2
         offset  : 3
-        
+
   - name        : I2C_LEMO_LEDS
     type        : StdRegister
     size        : 16
@@ -112,7 +117,7 @@ registers:
       - name    : BUSY3
         size    : 1
         offset  : 15
-        
+
   - name        : I2C_TRIGGER_EN
     type        : StdRegister
     size        : 16
@@ -127,7 +132,7 @@ registers:
       - name    : RJ45
         size    : 4
         offset  : 3
-        
+
   - name        : I2C_RESET_EN
     type        : StdRegister
     size        : 16
@@ -142,7 +147,7 @@ registers:
       - name    : RJ45
         size    : 4
         offset  : 3
-        
+
   - name        : I2C_IP_SEL
     type        : StdRegister
     size        : 16
@@ -165,4 +170,3 @@ registers:
       - name    : '3'
         size    : 2
         offset  : 9
-        
