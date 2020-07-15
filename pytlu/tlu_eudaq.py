@@ -310,7 +310,8 @@ def main():
                     # According to EUDAQ nomenclature
                     particles = trg_number + skipped_triggers  # amount of possible triggers (accepted + skipped)
                     status = get_dut_status()  # TLU status (TX state)
-                    pp.SendEventExtraInfo((event_counter, trg_timestamp, trg_number), particles, status)  # Send data to EUDAQ
+                    scalers = '-, -, -, -'  # input triggers on each scinitllator input (TODO: not yet implemented)
+                    pp.SendEventExtraInfo((event_counter, trg_timestamp, trg_number), particles, status, scalers)  # Send data to EUDAQ
                     if pp.Error or pp.Terminating:
                         break
                     if pp.StoppingRun:
