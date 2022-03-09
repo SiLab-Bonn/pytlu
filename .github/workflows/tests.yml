@@ -23,10 +23,15 @@ jobs:
     - name: Install basil
       shell: bash -l {0}
       run: |
-        pip install basil-daq>=3.0.0 cocotb==1.0.dev3 xvfbwrapper
+        pip install basil-daq>=3.0.0
+    - name: Install Python dependencies
+      shell: bash -l {0}
+      run: |
+        pip install cocotb==1.0.dev3 xvfbwrapper
     - name: Install iverilog
       run: |
         sudo apt-get install -qq libhdf5-serial-dev
+        # sudo apt-get -y install iverilog-daily
         sudo apt-get install gperf
         git clone https://github.com/steveicarus/iverilog.git
         cd iverilog; autoconf; ./configure; make; sudo make install; cd ..
@@ -41,5 +46,5 @@ jobs:
     - name: Test
       shell: bash -l {0}
       run: |
-        pytest test/test_*.py
+        pytest tests/test_*.py
 
