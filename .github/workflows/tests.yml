@@ -27,7 +27,7 @@ jobs:
     - name: Install Python dependencies
       shell: bash -l {0}
       run: |
-        pip install cocotb==1.0.dev3 xvfbwrapper pyqt5
+        pip install cocotb cocotb_bus xvfbwrapper pyqt5
     - name: Install iverilog
       run: |
         sudo apt-get install -qq libhdf5-serial-dev
@@ -46,5 +46,6 @@ jobs:
     - name: Test
       shell: bash -l {0}
       run: |
-        pytest tests/test_*.py
+        cd tests
+        pytest -s -v
 

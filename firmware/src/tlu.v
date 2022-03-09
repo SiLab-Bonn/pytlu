@@ -15,8 +15,11 @@
 `include "utils/ddr_des.v"
 `include "utils/cdc_syncfifo.v"
 `include "utils/generic_fifo.v"
+`include "utils/ramb_8_to_n.v"
 
 `include "gpio/gpio.v"
+`include "gpio/gpio_core.v"
+
 
 `include "i2c/i2c.v"
 `include "i2c/i2c_core.v"
