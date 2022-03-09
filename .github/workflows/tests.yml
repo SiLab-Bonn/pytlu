@@ -19,7 +19,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda info -a
-        conda install pytest numpy psutil qtpy pyqt pyyaml pyzmq pytables
+        conda install pytest numpy psutil qtpy pyqt5 pyyaml pyzmq pytables
     - name: Install basil
       shell: bash -l {0}
       run: |
