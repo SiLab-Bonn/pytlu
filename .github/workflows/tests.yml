@@ -28,7 +28,7 @@ jobs:
       shell: bash -l {0}
       run: |
         pip install cocotb==1.0.dev3
-        pip install xvfbwrapper  # fake x server for Qt gui tests
+        pip install xvfbwrapper
     - name: Install iverilog
       shell: bash -l {0}
       run: |
