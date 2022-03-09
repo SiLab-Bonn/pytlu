@@ -19,7 +19,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda info -a
-        conda install pytest numpy psutil qtpy pyqt5 pyyaml pyzmq pytables
+        conda install pytest numpy psutil qtpy pyyaml pyzmq pytables
     - name: Install basil
       shell: bash -l {0}
       run: |
@@ -27,7 +27,7 @@ jobs:
     - name: Install Python dependencies
       shell: bash -l {0}
       run: |
-        pip install cocotb==1.0.dev3 xvfbwrapper
+        pip install cocotb==1.0.dev3 xvfbwrapper pyqt5
     - name: Install iverilog
       run: |
         sudo apt-get install -qq libhdf5-serial-dev
