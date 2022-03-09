@@ -24,10 +24,6 @@ jobs:
       shell: bash -l {0}
       run: |
         pip install basil-daq>=3.0.0 cocotb==1.0.dev3 xvfbwrapper
-#    - name: Install Python dependencies
-#      shell: bash -l {0}
-#      run: |
-#        pip install cocotb==1.0.dev3 xvfbwrapper
     - name: Install iverilog
       run: |
         sudo apt-get install -qq libhdf5-serial-dev
