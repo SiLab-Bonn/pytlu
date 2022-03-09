@@ -48,6 +48,5 @@ jobs:
       shell: bash -l {0}
       run: |
         cd tests
-        export QT_DEBUG_PLUGINS=1
         pytest -s -v
 
