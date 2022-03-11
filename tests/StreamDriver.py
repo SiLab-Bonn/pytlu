@@ -12,8 +12,7 @@
 
 import cocotb
 from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, ReadOnly, Timer
-from cocotb.result import ReturnValue
+from cocotb.triggers import RisingEdge, Timer
 from cocotb.clock import Clock
 from cocotb_bus.drivers import BusDriver
 
@@ -40,7 +39,7 @@ class StreamDriver(BusDriver):
         self.BASE_ADDRESS_STREAM = 0x0001000000000000
 
         # Kick off a clock generator
-        cocotb.fork(Clock(self.clock, 20830).start())
+        cocotb.fork(Clock(self.clock, 20000).start())
 
     @cocotb.coroutine
     def init(self):
@@ -117,7 +116,7 @@ class StreamDriver(BusDriver):
             self.bus.BUS_DATA.value = self._high_impedence
             yield RisingEdge(self.clock)
 
-        raise ReturnValue(result)
+        return result
 
     @cocotb.coroutine
     def write(self, address, data):
@@ -172,4 +171,4 @@ class StreamDriver(BusDriver):
         self.bus.STREAM_READY.value = 0
         yield RisingEdge(self.clock)
 
-        raise ReturnValue(result)
+        return result
