@@ -362,7 +362,7 @@ class TestSim(unittest.TestCase):
         while not self.dut['test_pulser'].is_ready:
             pass
 
-        expected_vetoed_triggers = 29  # 29 triggers will not be accepted due to veto signal
+        expected_vetoed_triggers = 28  # 28 triggers will not be accepted due to veto signal
         self.check_data(how_many_triggers - expected_vetoed_triggers)
 
     def tearDown(self):
