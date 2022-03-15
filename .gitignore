@@ -76,4 +76,6 @@ output_data
 *.lprof
 
 *.history
-.
+
+sim_build
+results.xml
