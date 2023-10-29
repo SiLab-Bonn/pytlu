@@ -12,10 +12,9 @@
 
 import cocotb
 from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, ReadOnly, Timer
-from cocotb.drivers import BusDriver
-from cocotb.result import ReturnValue
+from cocotb.triggers import RisingEdge, Timer
 from cocotb.clock import Clock
+from cocotb_bus.drivers import BusDriver
 
 
 class StreamDriver(BusDriver):
@@ -25,14 +24,14 @@ class StreamDriver(BusDriver):
     _optional_signals = ["BUS_BYTE_ACCESS"]
 
     def __init__(self, entity):
-        BusDriver.__init__(self, entity, "", entity.BUS_CLK)
+        BusDriver.__init__(self, entity, "", entity.BUS_CLK, case_insensitive=False)
 
         # Create an appropriately sized high-impedence value
-        self._high_impedence = BinaryValue(bits=len(self.bus.BUS_DATA))
+        self._high_impedence = BinaryValue(n_bits=len(self.bus.BUS_DATA))
         self._high_impedence.binstr = "Z" * len(self.bus.BUS_DATA)
 
         # Create an appropriately sized high-impedence value
-        self._x = BinaryValue(bits=len(self.bus.BUS_ADD))
+        self._x = BinaryValue(n_bits=len(self.bus.BUS_ADD))
         self._x.binstr = "x" * len(self.bus.BUS_ADD)
 
         self._has_byte_acces = False
@@ -40,22 +39,22 @@ class StreamDriver(BusDriver):
         self.BASE_ADDRESS_STREAM = 0x0001000000000000
 
         # Kick off a clock generator
-        cocotb.fork(Clock(self.clock, 20830).start())
+        cocotb.fork(Clock(self.clock, 20000).start())
 
     @cocotb.coroutine
     def init(self):
         # Defaults
-        self.bus.BUS_RST <= 1
-        self.bus.BUS_RD <= 0
-        self.bus.BUS_WR <= 0
-        self.bus.BUS_ADD <= self._x
-        self.bus.BUS_DATA <= self._high_impedence
-        self.bus.STREAM_READY <= 0
+        self.bus.BUS_RST.value = 1
+        self.bus.BUS_RD.value = 0
+        self.bus.BUS_WR.value = 0
+        self.bus.BUS_ADD.value = self._x
+        self.bus.BUS_DATA.value = self._high_impedence
+        self.bus.STREAM_READY.value = 0
 
         for _ in range(8):
             yield RisingEdge(self.clock)
 
-        self.bus.BUS_RST <= 0
+        self.bus.BUS_RST.value = 0
 
         for _ in range(2):
             yield RisingEdge(self.clock)
@@ -75,20 +74,20 @@ class StreamDriver(BusDriver):
         if address >= self.BASE_ADDRESS_STREAM:
             result = yield self.read_stream(address, size)
         else:
-            self.bus.BUS_DATA <= self._high_impedence
-            self.bus.BUS_ADD <= self._x
-            self.bus.BUS_RD <= 0
+            self.bus.BUS_DATA.value = self._high_impedence
+            self.bus.BUS_ADD.value = self._x
+            self.bus.BUS_RD.value = 0
 
             yield RisingEdge(self.clock)
 
             byte = 0
             while(byte <= size):
                 if(byte == size):
-                    self.bus.BUS_RD <= 0
+                    self.bus.BUS_RD.value = 0
                 else:
-                    self.bus.BUS_RD <= 1
+                    self.bus.BUS_RD.value = 1
 
-                self.bus.BUS_ADD <= address + byte
+                self.bus.BUS_ADD.value = address + byte
 
                 yield RisingEdge(self.clock)
 
@@ -113,38 +112,38 @@ class StreamDriver(BusDriver):
                 else:
                     byte += 1
 
-            self.bus.BUS_ADD <= self._x
-            self.bus.BUS_DATA <= self._high_impedence
+            self.bus.BUS_ADD.value = self._x
+            self.bus.BUS_DATA.value = self._high_impedence
             yield RisingEdge(self.clock)
 
-        raise ReturnValue(result)
+        return result
 
     @cocotb.coroutine
     def write(self, address, data):
 
-        self.bus.BUS_ADD <= self._x
-        self.bus.BUS_DATA <= self._high_impedence
-        self.bus.BUS_WR <= 0
+        self.bus.BUS_ADD.value = self._x
+        self.bus.BUS_DATA.value = self._high_impedence
+        self.bus.BUS_WR.value = 0
 
         yield RisingEdge(self.clock)
 
         for index, byte in enumerate(data):
-            self.bus.BUS_DATA <= byte
-            self.bus.BUS_WR <= 1
-            self.bus.BUS_ADD <= address + index
+            self.bus.BUS_DATA.value = byte
+            self.bus.BUS_WR.value = 1
+            self.bus.BUS_ADD.value = address + index
             yield Timer(1)  # This is hack for iverilog
-            self.bus.BUS_DATA <= byte
-            self.bus.BUS_WR <= 1
-            self.bus.BUS_ADD <= address + index
+            self.bus.BUS_DATA.value = byte
+            self.bus.BUS_WR.value = 1
+            self.bus.BUS_ADD.value = address + index
 
             yield RisingEdge(self.clock)
 
         if(self._has_byte_acces and self.bus.BUS_BYTE_ACCESS.value.integer == 0):
             raise NotImplementedError("BUS_BYTE_ACCESS for write to be implemented.")
 
-        self.bus.BUS_DATA <= self._high_impedence
-        self.bus.BUS_ADD <= self._x
-        self.bus.BUS_WR <= 0
+        self.bus.BUS_DATA.value = self._high_impedence
+        self.bus.BUS_ADD.value = self._x
+        self.bus.BUS_WR.value = 0
 
         yield RisingEdge(self.clock)
 
@@ -153,7 +152,7 @@ class StreamDriver(BusDriver):
         result = []
 
         yield RisingEdge(self.clock)
-        self.bus.STREAM_READY <= 1
+        self.bus.STREAM_READY.value = 1
 
         for _ in range(size // 2):
 
@@ -169,8 +168,7 @@ class StreamDriver(BusDriver):
         yield RisingEdge(self.clock)
         yield RisingEdge(self.clock)
         yield RisingEdge(self.clock)
-        self.bus.STREAM_READY <= 0
+        self.bus.STREAM_READY.value = 0
         yield RisingEdge(self.clock)
 
-        raise ReturnValue(result)
-
+        return result

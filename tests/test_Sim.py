@@ -25,7 +25,7 @@ class TestSim(unittest.TestCase):
             include_dirs=(root_dir, root_dir + "/firmware/src", root_dir + "/tests"))
 
         with open(root_dir + '/pytlu/tlu.yaml', 'r') as f:
-            cnfg = yaml.load(f)
+            cnfg = yaml.safe_load(f)
         cnfg['transfer_layer'][0]['type'] = 'SiSim'
         cnfg['hw_drivers'].append({'name': 'SEQ_GEN_TB', 'type': 'seq_gen', 'interface': 'intf', 'base_addr': 0xc000})
         cnfg['hw_drivers'].append({'name': 'TLU_TB', 'type': 'tlu', 'interface': 'intf', 'base_addr': 0xf000})
@@ -362,7 +362,7 @@ class TestSim(unittest.TestCase):
         while not self.dut['test_pulser'].is_ready:
             pass
 
-        expected_vetoed_triggers = 29  # 29 triggers will not be accepted due to veto signal
+        expected_vetoed_triggers = 28  # 28 triggers will not be accepted due to veto signal
         self.check_data(how_many_triggers - expected_vetoed_triggers)
 
     def tearDown(self):

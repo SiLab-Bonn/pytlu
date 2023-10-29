@@ -84,6 +84,10 @@ Example:
 pytlu -t 10000 -c 10000 -oe CH1 --timeout 2
 ```
 
+## Test beam usage
+
+A detailed description of the TLU can be found [here](https://www.eudet.org/e26/e28/e42441/e57298/EUDET-MEMO-2009-04.pdf). Do not forget to adjust the trigger threshold using the small screw on the front side of the TLU (counter clockwise increases the threshold).
+
 ## EUDAQ integration
 
 Pytlu can connect to the data acquisition framework [EUDAQ 1](https://github.com/eudaq/eudaq/tree/v1.x-dev), which is the common run control software used at *pixel test beams*. For the installation of EUDAQ 1.x please follow this [wiki](https://telescopes.desy.de/EUDAQ). To use the EUDAQ libraries within pytlu a [python wrapper](https://github.com/eudaq/eudaq/blob/v1.x-dev/python/PyEUDAQWrapper.py) is used. This wrapper is not build with default settings, thus the following cmake option must be specified when building EUDAQ `-DBUILD_python=ON`.
@@ -150,8 +154,8 @@ If you did not add the EUDAQ directory to the `PYTHONPATH` explicitly after inst
 pytlu_eudaq --path /home/user/git/eudaq
 ```
 
-### Debugging and testing
-#### Replay feature
+## Debugging and testing
+### Replay feature
 It is possible to replay a recorded pytlu raw data file with correct timing to test the system. This allows development and debugging without hardware. To replay a [pytlu raw data file](https://github.com/SiLab-Bonn/pytlu/blob/development/data/tlu_example_data.h5) one has to type:
 
 ```
