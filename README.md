@@ -1,6 +1,6 @@
 ﻿# pytlu
 
-[![Build Status](https://travis-ci.org/SiLab-Bonn/pytlu.svg?branch=master)](https://travis-ci.org/SiLab-Bonn/pytlu)
+[![Build Status](https://github.com/silab-bonn/pytlu/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/silab-bonn/pytlu/actions?query=workflow%3A%22tests%22)
 
 DAQ software and firmware for the EUDAQ [Trigger Logic Unit (TLU)](https://twiki.cern.ch/twiki/bin/view/MimosaTelescope/TLU).
 
